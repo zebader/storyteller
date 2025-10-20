@@ -34,8 +34,8 @@ export class ImageService {
     try {
       // Enhance the prompt with kid-friendly context for 3-year-olds
       const enhancedPrompt = storyContext 
-        ? `${prompt}. Context: This is part of a children's story about "${storyContext}". Create a simple, colorful cartoon illustration perfect for 3-year-old children. Use bright, cheerful colors, simple shapes, cute characters, and a friendly, playful style. Make it look like a children's book illustration.`
-        : `${prompt}. Create a simple, colorful cartoon illustration perfect for 3-year-old children. Use bright, cheerful colors, simple shapes, cute characters, and a friendly, playful style. Make it look like a children's book illustration.`;
+        ? `${prompt}. Context: This is part of a children's story about "${storyContext}". Create a simple, colorful cartoon illustration perfect for 3-year-old children. Use bright, cheerful colors, simple shapes, cute characters, and a friendly, playful style. Make it look like a children's book illustration. IMPORTANT: Do not include any text, words, letters, or written content in the image. The illustration should be purely visual without any text elements. Maintain consistent character appearance and style throughout the story.`
+        : `${prompt}. Create a simple, colorful cartoon illustration perfect for 3-year-old children. Use bright, cheerful colors, simple shapes, cute characters, and a friendly, playful style. Make it look like a children's book illustration. IMPORTANT: Do not include any text, words, letters, or written content in the image. The illustration should be purely visual without any text elements.`;
 
       const requestBody: FreepikGeminiRequest = {
         prompt: enhancedPrompt

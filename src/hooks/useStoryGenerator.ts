@@ -56,15 +56,54 @@ export const useStoryGenerator = () => {
     return false;
   };
 
-  const generateImageForParagraph = async (paragraph: string, storyPrompt: string): Promise<string> => {
+  const extractCharacterContext = (prompt: string, storyContent: string): string => {
+    // Extract character information from the prompt and story
+    let characterInfo = '';
+    
+    // If using advanced mode, extract character details from form data
+    if (advancedMode && formData.protagonist) {
+      characterInfo = `Main character: ${formData.protagonist}. `;
+    }
+    
+    // Extract character mentions from the story content
+    const storyLines = storyContent.split('\n').filter(line => line.trim());
+    if (storyLines.length > 0) {
+      const firstParagraph = storyLines[0];
+      // Look for character descriptions in the first paragraph
+      const characterMatch = firstParagraph.match(/(?:There was|Once upon a time|In a|A|The)\s+([^,.]{10,50})/i);
+      if (characterMatch && !characterInfo) {
+        characterInfo = `Main character: ${characterMatch[1].trim()}. `;
+      }
+    }
+    
+    // Add setting information if available
+    if (advancedMode && formData.setting) {
+      characterInfo += `Setting: ${formData.setting}. `;
+    }
+    
+    return characterInfo;
+  };
+
+  const generateImageForParagraph = async (
+    paragraph: string, 
+    storyPrompt: string, 
+    characterContext?: string,
+    pageNumber?: number,
+    totalPages?: number
+  ): Promise<string> => {
     try {
       // Check if Freepik service is configured
       if (!imageService.isConfigured()) {
         throw new Error('FREEPIK_NOT_CONFIGURED');
       }
 
+      // Create enhanced context with character consistency
+      const enhancedContext = characterContext 
+        ? `${storyPrompt} ${characterContext} Page ${pageNumber} of ${totalPages}.`
+        : storyPrompt;
+
       // Use Freepik service to generate image
-      const imageUrl = await imageService.generateImage(paragraph, storyPrompt);
+      const imageUrl = await imageService.generateImage(paragraph, enhancedContext);
       
       if (!imageUrl) {
         throw new Error('No image data received from Freepik');
@@ -216,9 +255,18 @@ Format your response as a complete story with clear paragraph breaks.`);
       // Generate images for each paragraph (only if enabled and not quota exceeded)
       if (generateImages) {
         try {
+          // Extract character and theme information from the story
+          const characterContext = extractCharacterContext(prompt, storyContent);
+          
           for (let i = 0; i < pages.length; i++) {
             try {
-              const imageUrl = await generateImageForParagraph(pages[i].paragraph, prompt);
+              const imageUrl = await generateImageForParagraph(
+                pages[i].paragraph, 
+                prompt, 
+                characterContext,
+                i + 1,
+                pages.length
+              );
               if (imageUrl) {
                 setStories(prev => prev.map(story => 
                   story.id === newStory.id 
