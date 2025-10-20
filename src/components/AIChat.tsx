@@ -33,12 +33,13 @@ const AIChat: React.FC = () => {
   return (
     <S.AppWrapper>
       <S.ChatContainer>
-      <S.ChatBox>
         {!genAI ? (
-          <S.ErrorMessage>
-            <p>{t('apiKeyNotFound')}</p>
-            <p>{t('apiKeyInstructions')}</p>
-          </S.ErrorMessage>
+          <S.ChatBox>
+            <S.ErrorMessage>
+              <p>{t('apiKeyNotFound')}</p>
+              <p>{t('apiKeyInstructions')}</p>
+            </S.ErrorMessage>
+          </S.ChatBox>
         ) : currentStoryId ? (
           // Multi-page story view
           <>
@@ -58,24 +59,22 @@ const AIChat: React.FC = () => {
                       </S.StoryPageInfo>
                     </S.StoryHeaderInfo>
                     <S.BackButton onClick={backToStories}>
-                      {t('backToStories')}
+                      ←
                     </S.BackButton>
                   </S.StoryHeader>
 
                   {/* Layout: Text + Image (if enabled) */}
                   {generateImages ? (
                     <S.TwoColumnLayout>
-                      {/* Left side - Text */}
+                      {/* Left - Text */}
                       <S.StoryTextColumn>
-                        <S.ColumnTitle>{t('storyColumn')}</S.ColumnTitle>
                         <S.StoryText>
                           {currentPageData?.paragraph}
                         </S.StoryText>
                       </S.StoryTextColumn>
 
-                      {/* Right side - Image */}
+                      {/* Right - Image */}
                       <S.StoryImageColumn>
-                        <S.ColumnTitle>{t('illustrationColumn')}</S.ColumnTitle>
                         {currentPageData?.imageUrl ? (
                           <S.StoryImage 
                             src={currentPageData?.imageUrl} 
@@ -93,7 +92,6 @@ const AIChat: React.FC = () => {
                     /* Single column - Text only */
                     <S.SingleColumnLayout>
                       <S.StoryTextColumn>
-                        <S.ColumnTitle>{t('storyColumn')}</S.ColumnTitle>
                         <S.StoryText>
                           {currentPageData?.paragraph}
                         </S.StoryText>
@@ -107,7 +105,8 @@ const AIChat: React.FC = () => {
                       onClick={prevPage}
                       disabled={currentPage === 0}
                     >
-                      {t('previousPage')}
+                      <S.NavButtonText>{t('previousPage')}</S.NavButtonText>
+                      <S.NavButtonIcon>‹</S.NavButtonIcon>
                     </S.NavButton>
 
                     {/* Page dots */}
@@ -125,7 +124,8 @@ const AIChat: React.FC = () => {
                       onClick={nextPage}
                       disabled={currentPage === currentStory?.pages?.length - 1}
                     >
-                      {t('nextPage')}
+                      <S.NavButtonText>{t('nextPage')}</S.NavButtonText>
+                      <S.NavButtonIcon>›</S.NavButtonIcon>
                     </S.NavButton>
                   </S.PageNavigation>
                 </>
@@ -134,7 +134,7 @@ const AIChat: React.FC = () => {
           </>
         ) : (
           // Story list view
-          <>
+          <S.ChatBox>
             <S.MessagesContainer>
               {stories.length === 0 && !isLoading && (
                 <S.InfoMessage>
@@ -220,9 +220,8 @@ const AIChat: React.FC = () => {
                 {isLoading ? <S.LoadingSpinner /> : t('generateStory')}
               </S.SendButton>
             </S.InputContainer>
-          </>
+          </S.ChatBox>
         )}
-      </S.ChatBox>
       </S.ChatContainer>
     </S.AppWrapper>
   );

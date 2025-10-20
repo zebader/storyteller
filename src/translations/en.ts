@@ -8,7 +8,7 @@ export const en = {
   apiKeyInstructions: "Please set REACT_APP_GOOGLE_AI_API_KEY in your .env file.",
   
   // Story View
-  storyTitle: "📚",
+  storyTitle: "",
   pageInfo: "Page {current} of {total}",
   backToStories: "← Back to Stories",
   storyColumn: "📖 Story",

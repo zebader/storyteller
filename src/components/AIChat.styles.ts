@@ -161,10 +161,29 @@ export namespace S {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin: 20px 20px 40px 20px;
   padding: 15px;
   background: #f8f9fa;
   border-radius: 10px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1002;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 768px) {
+    margin: 15px 15px 30px 15px;
+    padding: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  @media (max-width: 480px) {
+    margin: 10px 10px 20px 10px;
+    padding: 10px;
+    gap: 8px;
+  }
 `;
 
   export const StoryHeaderInfo = styled.div``;
@@ -172,6 +191,21 @@ export namespace S {
   export const StoryTitle = styled.h3`
   margin: 0;
   color: #333;
+  font-size: 1.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100vw - 200px);
+  
+  @media (max-width: 768px) {
+    max-width: calc(100vw - 120px);
+    font-size: 1.1rem;
+  }
+  
+  @media (max-width: 480px) {
+    max-width: calc(100vw - 100px);
+    font-size: 1rem;
+  }
 `;
 
   export const StoryPageInfo = styled.p`
@@ -181,12 +215,18 @@ export namespace S {
 `;
 
   export const BackButton = styled.button`
-  padding: 8px 16px;
+  padding: 8px 12px;
   background: #6c757d;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 50%;
   cursor: pointer;
+  font-size: 1.2rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.2s ease;
 
   &:hover {
@@ -199,7 +239,29 @@ export namespace S {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  min-height: 400px;
+  height: calc(100vh - 200px);
+  position: fixed;
+  top: 100px;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  z-index: 1000;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 15px;
+    height: calc(100vh - 180px);
+    top: 90px;
+    padding: 15px;
+  }
+
+  @media (max-width: 480px) {
+    gap: 10px;
+    height: calc(100vh - 160px);
+    top: 80px;
+    padding: 10px;
+  }
 `;
 
   export const SingleColumnLayout = styled.div`
@@ -211,21 +273,45 @@ export namespace S {
 
   export const StoryTextColumn = styled.div`
   padding: 20px;
-  background: #f8f9fa;
-  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 10px;
+
+  @media (max-width: 768px) {
+    padding: 15px;
+    padding-right: 15px;
+    height: auto;
+    min-height: 200px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 10px;
+    padding-right: 10px;
+    min-height: 150px;
+  }
 `;
 
   export const StoryImageColumn = styled.div`
   padding: 20px;
-  background: #f8f9fa;
-  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
+  height: 100%;
+
+  @media (max-width: 768px) {
+    padding: 15px;
+    height: auto;
+    min-height: 250px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 10px;
+    min-height: 200px;
+  }
 `;
 
   export const ColumnTitle = styled.h4`
@@ -236,24 +322,40 @@ export namespace S {
   export const StoryText = styled.div`
   line-height: 1.8;
   font-size: 1.1rem;
-  color: #333;
+  color: white;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
 `;
 
   export const StoryImage = styled.img`
   max-width: 100%;
-  max-height: 300px;
+  max-height: 60vh;
+  width: auto;
+  height: auto;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  object-fit: contain;
 `;
 
   export const ImagePlaceholder = styled.div`
-  width: 200px;
-  height: 200px;
+  width: 100%;
+  max-height: 60vh;
+  min-height: 300px;
   background: #e9ecef;
   border-radius: 10px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   color: #666;
 `;
 
@@ -270,6 +372,31 @@ export namespace S {
   padding: 15px;
   background: #f8f9fa;
   border-radius: 10px;
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  z-index: 1001;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 768px) {
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    padding: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    padding: 10px;
+    gap: 8px;
+    justify-content: center;
+  }
 `;
 
   export const NavButton = styled.button<{ disabled?: boolean }>`
@@ -280,9 +407,37 @@ export namespace S {
   border-radius: 5px;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 
   &:hover {
     background: ${props => props.disabled ? '#e9ecef' : '#0056b3'};
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px 12px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    gap: 0;
+  }
+`;
+
+  export const NavButtonText = styled.span`
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+  export const NavButtonIcon = styled.span`
+  display: none;
+  font-size: 1.2rem;
+  font-weight: bold;
+
+  @media (max-width: 768px) {
+    display: block;
   }
 `;
 
