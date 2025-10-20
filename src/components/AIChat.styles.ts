@@ -269,6 +269,21 @@ export namespace S {
   grid-template-columns: 1fr;
   gap: 20px;
   min-height: 400px;
+  padding: 20px;
+  padding-top: 120px; /* Clear fixed StoryHeader */
+  padding-bottom: 100px; /* Clear fixed PageNavigation */
+
+  @media (max-width: 768px) {
+    padding: 15px;
+    padding-top: 100px; /* Match smaller header offset */
+    padding-bottom: 90px; /* Match smaller nav offset */
+  }
+
+  @media (max-width: 480px) {
+    padding: 10px;
+    padding-top: 90px; /* Match smallest header offset */
+    padding-bottom: 80px; /* Match smallest nav offset */
+  }
 `;
 
   export const StoryTextColumn = styled.div`
