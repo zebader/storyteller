@@ -559,7 +559,9 @@ export namespace S {
   justify-content: space-between;
 `;
 
-  export const CheckboxLabel = styled.label<{ inactive?: boolean }>`
+  export const CheckboxLabel = styled.label.withConfig({
+    shouldForwardProp: (prop) => prop !== 'inactive',
+  })<{ inactive?: boolean }>`
   color: ${props => props.inactive ? '#9aa0a6' : '#333'};
   cursor: pointer;
   transition: color 0.2s ease;
@@ -572,7 +574,9 @@ export namespace S {
     margin-bottom: 20px;
   `;
 
-  export const ModeButton = styled.button<{ active: boolean }>`
+  export const ModeButton = styled.button.withConfig({
+    shouldForwardProp: (prop) => prop !== 'active',
+  })<{ active: boolean }>`
     padding: 8px 16px;
     border: 2px solid ${props => props.active ? '#007bff' : '#ddd'};
     background: ${props => props.active ? '#007bff' : 'transparent'};
@@ -637,6 +641,29 @@ export namespace S {
     margin-top: 4px;
   `;
 
+  // Download Button
+  export const DownloadButton = styled.button`
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      background: #218838;
+    }
+
+    &:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+  `;
+
   // Toggle Switch (inspired by W3Schools switch)
   export const ToggleSlider = styled.span`
   position: absolute;
@@ -695,7 +722,9 @@ export namespace S {
   gap: 6px;
 `;
 
-  export const LanguageButton = styled.button<{ active: boolean }>`
+  export const LanguageButton = styled.button.withConfig({
+    shouldForwardProp: (prop) => prop !== 'active',
+  })<{ active: boolean }>`
   padding: 8px 12px;
   background: ${props => props.active ? 'rgba(255, 255, 255, 0.25)' : 'transparent'};
   color: white;

@@ -54,6 +54,8 @@ export const en = {
   endingExample: "Example: learns to share, saves the day, finds their treasure, makes a new friend...",
   endingPlaceholder: "Describe the ending...",
   atLeastOneRequired: "At least one question must be answered",
+  downloadPDF: "📄 Download PDF",
+  downloadingPDF: "Generating PDF...",
   inputPlaceholder: "Enter your children's story prompt here... (e.g., 'A friendly robot learning to dance')",
   generateStory: "Generate Story",
   

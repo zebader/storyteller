@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { S } from './AIChat.styles';
 import { useStoryGenerator } from '../hooks/useStoryGenerator';
 import { useTranslation } from '../hooks/useTranslation';
+import { pdfService } from '../services/pdfService';
 
 const AIChat: React.FC = () => {
   const {
@@ -34,6 +35,21 @@ const AIChat: React.FC = () => {
   } = useStoryGenerator();
 
   const { language, t, toggleLanguage } = useTranslation();
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    const currentStory = stories.find(s => s.id === currentStoryId);
+    if (!currentStory) return;
+    
+    setIsDownloadingPDF(true);
+    try {
+      await pdfService.generateStoryPDF(currentStory);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
 
 
 
@@ -65,9 +81,17 @@ const AIChat: React.FC = () => {
                         {t('pageInfo', { current: currentPage + 1, total: currentStory?.pages.length })}
                       </S.StoryPageInfo>
                     </S.StoryHeaderInfo>
-                    <S.BackButton onClick={backToStories}>
-                      ←
-                    </S.BackButton>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <S.DownloadButton 
+                        onClick={handleDownloadPDF} 
+                        disabled={isDownloadingPDF}
+                      >
+                        {isDownloadingPDF ? t('downloadingPDF') : t('downloadPDF')}
+                      </S.DownloadButton>
+                      <S.BackButton onClick={backToStories}>
+                        ←
+                      </S.BackButton>
+                    </div>
                   </S.StoryHeader>
 
                   {/* Layout: Text + Image (if enabled) */}
