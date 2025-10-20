@@ -559,10 +559,62 @@ export namespace S {
   justify-content: space-between;
 `;
 
-  export const CheckboxLabel = styled.label`
-  color: #333;
+  export const CheckboxLabel = styled.label<{ inactive?: boolean }>`
+  color: ${props => props.inactive ? '#9aa0a6' : '#333'};
   cursor: pointer;
-`;
+  transition: color 0.2s ease;
+  `;
+
+  // Toggle Switch (inspired by W3Schools switch)
+  export const ToggleSlider = styled.span`
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .2s ease;
+  border-radius: 999px;
+
+  &::before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .2s ease;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  `;
+
+  export const ToggleSwitch = styled.label`
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 28px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  input:checked + ${ToggleSlider} {
+    background-color: #2196F3;
+  }
+
+  input:focus + ${ToggleSlider} {
+    box-shadow: 0 0 1px #2196F3;
+  }
+
+  input:checked + ${ToggleSlider}::before {
+    transform: translateX(20px);
+  }
+  `;
 
   // Language Toggle
   export const LanguageToggle = styled.div`

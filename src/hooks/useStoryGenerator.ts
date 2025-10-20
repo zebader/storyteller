@@ -24,7 +24,8 @@ export const useStoryGenerator = () => {
   const [genAI, setGenAI] = useState<GoogleGenerativeAI | null>(null);
   const [currentStoryId, setCurrentStoryId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [generateImages, setGenerateImages] = useState(true);
+  const [generateImages, setGenerateImages] = useState(false);
+  const [toddlerMode, setToddlerMode] = useState(false);
   const [quotaError, setQuotaError] = useState<string | null>(null);
   
   const { language } = useTranslation();
@@ -92,7 +93,37 @@ export const useStoryGenerator = () => {
     setIsLoading(true);
 
     try {
-      const systemInstruction = language === 'es' 
+      const systemInstruction = toddlerMode
+        ? (language === 'es'
+          ? `Eres un narrador para niños de 3 años.
+
+Reglas:
+- Genera exactamente 5 párrafos.
+- Cada párrafo con 1-2 oraciones MUY cortas (máx. 8-10 palabras).
+- Usa palabras simples y cotidianas.
+- Tiempo presente. Frases afirmativas.
+- Tono tierno y calmado. Sin miedo ni violencia.
+- Repite ideas clave. Usa onomatopeyas suaves ("toc toc", "plin").
+- Un personaje principal y una acción clara por escena.
+- Mantente fiel al prompt.
+- Añade detalles sensoriales simples (colores, sonidos suaves).
+
+Formato: historia completa con separaciones claras entre párrafos.`
+          : `You are a storyteller for 3-year-old kids.
+
+Rules:
+- Generate exactly 5 paragraphs.
+- Each paragraph has 1-2 VERY short sentences (max 8-10 words).
+- Use very simple, everyday words.
+- Present tense. Positive, calm tone.
+- No fear or violence. Gentle and kind.
+- Repeat key ideas. Use soft onomatopoeia ("knock knock", "plink").
+- One main character and one clear action per scene.
+- Stay faithful to the user's prompt.
+- Add simple sensory details (soft sounds, bright colors).
+
+Format your response as a complete story with clear paragraph breaks.`)
+        : (language === 'es' 
         ? `Eres un maestro narrador. Tu rol es crear historias atractivas y bien estructuradas basadas en los prompts del usuario.
 
 Reglas:
@@ -118,7 +149,7 @@ Rules:
 - Write in a narrative style that's suitable for all ages
 - Each paragraph should be visually rich and descriptive for illustration
 
-Format your response as a complete story with clear paragraph breaks.`;
+Format your response as a complete story with clear paragraph breaks.`);
 
       const model = genAI.getGenerativeModel({ 
         model: "gemini-2.5-flash",
@@ -254,11 +285,13 @@ This is a common issue with the free tier.`;
     currentStoryId,
     currentPage,
     generateImages,
+    toddlerMode,
     quotaError,
     
     // Actions
     setInputValue,
     setGenerateImages,
+    setToddlerMode,
     setCurrentStoryId,
     setCurrentPage,
     generateStory,

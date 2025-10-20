@@ -12,9 +12,11 @@ const AIChat: React.FC = () => {
     currentStoryId,
     currentPage,
     generateImages,
+    toddlerMode,
     quotaError,
     setInputValue,
     setGenerateImages,
+    setToddlerMode,
     setCurrentStoryId,
     setCurrentPage,
     generateStory,
@@ -186,15 +188,33 @@ const AIChat: React.FC = () => {
 
             <S.CheckboxContainer>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="checkbox"
-                  id="generateImages"
-                  checked={generateImages}
-                  onChange={(e) => setGenerateImages(e.target.checked)}
-                  disabled={isLoading}
-                />
-                <S.CheckboxLabel htmlFor="generateImages">
+                <S.ToggleSwitch htmlFor="generateImages">
+                  <input
+                    type="checkbox"
+                    id="generateImages"
+                    checked={generateImages}
+                    onChange={(e) => setGenerateImages(e.target.checked)}
+                    disabled={isLoading}
+                  />
+                  <S.ToggleSlider />
+                </S.ToggleSwitch>
+                <S.CheckboxLabel htmlFor="generateImages" inactive={!generateImages}>
                   {t('generateIllustrations')}
+                </S.CheckboxLabel>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <S.ToggleSwitch htmlFor="toddlerMode">
+                  <input
+                    type="checkbox"
+                    id="toddlerMode"
+                    checked={toddlerMode}
+                    onChange={(e) => setToddlerMode(e.target.checked)}
+                    disabled={isLoading}
+                  />
+                  <S.ToggleSlider />
+                </S.ToggleSwitch>
+                <S.CheckboxLabel htmlFor="toddlerMode" inactive={!toddlerMode}>
+                  {t('toddlerMode')}
                 </S.CheckboxLabel>
               </div>
               <S.LanguageToggle>

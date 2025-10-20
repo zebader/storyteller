@@ -32,6 +32,7 @@ export const es = {
   
   // Form Elements
   generateIllustrations: "Generar ilustraciones",
+  toddlerMode: "Modo 3 años",
   inputPlaceholder: "Ingresa tu prompt de historia infantil aquí... (ej., 'Un robot amigable aprendiendo a bailar')",
   generateStory: "Generar Historia",
   
