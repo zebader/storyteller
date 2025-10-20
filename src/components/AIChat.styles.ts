@@ -565,6 +565,78 @@ export namespace S {
   transition: color 0.2s ease;
   `;
 
+  // Advanced Form Components
+  export const ModeToggle = styled.div`
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  `;
+
+  export const ModeButton = styled.button<{ active: boolean }>`
+    padding: 8px 16px;
+    border: 2px solid ${props => props.active ? '#007bff' : '#ddd'};
+    background: ${props => props.active ? '#007bff' : 'transparent'};
+    color: ${props => props.active ? 'white' : '#333'};
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #007bff;
+      background: ${props => props.active ? '#0056b3' : '#f8f9fa'};
+    }
+  `;
+
+  export const AdvancedForm = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 20px;
+  `;
+
+  export const FormField = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  `;
+
+  export const FormLabel = styled.label`
+    font-weight: 600;
+    color: #333;
+    font-size: 16px;
+  `;
+
+  export const FormExample = styled.span`
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+  `;
+
+  export const FormInput = styled.input`
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+
+    &::placeholder {
+      color: #999;
+    }
+  `;
+
+  export const FormError = styled.div`
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 4px;
+  `;
+
   // Toggle Switch (inspired by W3Schools switch)
   export const ToggleSlider = styled.span`
   position: absolute;

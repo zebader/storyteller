@@ -27,6 +27,15 @@ export const useStoryGenerator = () => {
   const [generateImages, setGenerateImages] = useState(false);
   const [toddlerMode, setToddlerMode] = useState(false);
   const [quotaError, setQuotaError] = useState<string | null>(null);
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [formData, setFormData] = useState({
+    protagonist: '',
+    goal: '',
+    setting: '',
+    problem: '',
+    helper: '',
+    ending: ''
+  });
   
   const { language } = useTranslation();
 
@@ -86,10 +95,32 @@ export const useStoryGenerator = () => {
   };
 
   const generateStory = async () => {
-    if (!inputValue.trim() || !genAI || isLoading) return;
+    // Validate input based on mode
+    if (advancedMode) {
+      const hasAtLeastOneField = Object.values(formData).some(value => value.trim());
+      if (!hasAtLeastOneField) {
+        return; // Will be handled by UI validation
+      }
+    } else {
+      if (!inputValue.trim() || !genAI || isLoading) return;
+    }
 
-    const prompt = inputValue;
-    setInputValue('');
+    // Build prompt based on mode
+    let prompt: string;
+    if (advancedMode) {
+      const parts = [];
+      if (formData.protagonist.trim()) parts.push(`Protagonista: ${formData.protagonist.trim()}`);
+      if (formData.goal.trim()) parts.push(`Objetivo: ${formData.goal.trim()}`);
+      if (formData.setting.trim()) parts.push(`Lugar: ${formData.setting.trim()}`);
+      if (formData.problem.trim()) parts.push(`Problema: ${formData.problem.trim()}`);
+      if (formData.helper.trim()) parts.push(`Ayuda: ${formData.helper.trim()}`);
+      if (formData.ending.trim()) parts.push(`Final: ${formData.ending.trim()}`);
+      prompt = parts.join('. ');
+    } else {
+      prompt = inputValue;
+      setInputValue('');
+    }
+    
     setIsLoading(true);
 
     try {
@@ -151,7 +182,7 @@ Rules:
 
 Format your response as a complete story with clear paragraph breaks.`);
 
-      const model = genAI.getGenerativeModel({ 
+      const model = genAI!.getGenerativeModel({ 
         model: "gemini-2.5-flash",
         systemInstruction
       });
@@ -276,6 +307,14 @@ This is a common issue with the free tier.`;
     setQuotaError(null);
   };
 
+  const updateFormData = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const validateAdvancedForm = () => {
+    return Object.values(formData).some(value => value.trim());
+  };
+
   return {
     // State
     stories,
@@ -287,6 +326,8 @@ This is a common issue with the free tier.`;
     generateImages,
     toddlerMode,
     quotaError,
+    advancedMode,
+    formData,
     
     // Actions
     setInputValue,
@@ -301,5 +342,8 @@ This is a common issue with the free tier.`;
     prevPage,
     backToStories,
     dismissQuotaError,
+    setAdvancedMode,
+    updateFormData,
+    validateAdvancedForm,
   };
 };
