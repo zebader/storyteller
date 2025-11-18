@@ -130,7 +130,7 @@ export namespace S {
   border-top: 3px solid #007bff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-right: 10px;
+  flex-shrink: 0;
 
   @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -523,10 +523,174 @@ export namespace S {
 
 // Loading and Error States
   export const LoadingMessage = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: #f0f0f0;
+  border-radius: 10px;
+  margin: 10px 0;
   text-align: center;
-  padding: 40px;
   color: #666;
 `;
+
+  export const LoadingSteps = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  `;
+
+  export const LoadingStep = styled.div.withConfig({
+    shouldForwardProp: (prop) => prop !== 'active' && prop !== 'completed',
+  })<{ active?: boolean; completed?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: ${props => props.active ? '#e3f2fd' : props.completed ? '#e8f5e9' : '#f5f5f5'};
+  border-radius: 8px;
+  border-left: 4px solid ${props => props.active ? '#2196f3' : props.completed ? '#4caf50' : '#ccc'};
+  transition: all 0.3s ease;
+  `;
+
+  export const StepNumber = styled.div<{ completed?: boolean }>`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: ${props => props.completed ? '#4caf50' : '#2196f3'};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  `;
+
+  export const StepContent = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  `;
+
+  export const StepText = styled.div`
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: ${props => props.children?.toString().includes('Creating') ? '500' : '400'};
+  `;
+
+  export const PreviewButton = styled.button`
+  background: transparent;
+  color: #4caf50;
+  border: 2px solid #4caf50;
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+
+  &:active {
+    transform: scale(0.95);
+  }
+  `;
+
+  export const StoryPreviewModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  `;
+
+  export const ModalOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  `;
+
+  export const ModalContent = styled.div`
+  position: relative;
+  background: white;
+  border-radius: 15px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  `;
+
+  export const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  `;
+
+  export const ModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+  `;
+
+  export const ModalCloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
+  `;
+
+  export const ModalBody = styled.div`
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  `;
+
+  export const PreviewStoryContent = styled.div`
+  line-height: 1.8;
+  color: #333;
+  `;
+
+  export const PreviewParagraph = styled.p`
+  margin: 0 0 20px 0;
+  font-size: 1rem;
+  text-align: justify;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+  `;
 
   export const QuotaErrorContainer = styled.div`
   margin-bottom: 20px;

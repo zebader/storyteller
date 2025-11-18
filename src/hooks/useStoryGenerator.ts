@@ -36,6 +36,10 @@ export const useStoryGenerator = () => {
     helper: '',
     ending: ''
   });
+  const [generationStep, setGenerationStep] = useState<'story' | 'images' | null>(null);
+  const [imagesGenerated, setImagesGenerated] = useState(0);
+  const [totalImages, setTotalImages] = useState(0);
+  const [pendingStory, setPendingStory] = useState<Story | null>(null);
   
   const { language } = useTranslation();
 
@@ -208,6 +212,9 @@ export const useStoryGenerator = () => {
     }
     
     setIsLoading(true);
+    setGenerationStep('story');
+    setImagesGenerated(0);
+    setTotalImages(0);
 
     try {
       const systemInstruction = toddlerMode
@@ -295,15 +302,22 @@ Format your response as a complete story with clear paragraph breaks.`);
         timestamp: new Date()
       };
 
-      setStories(prev => [newStory, ...prev]);
-      setCurrentStoryId(newStory.id);
-      setCurrentPage(0);
+      // Store story temporarily - don't add to list until images are ready
+      setPendingStory(newStory);
 
       // Generate images for each paragraph (only if enabled and not quota exceeded)
       if (generateImages) {
+        // Step 2: Generate images
+        setGenerationStep('images');
+        setTotalImages(pages.length);
+        setImagesGenerated(0);
+        
         try {
           // Extract character and theme information from the story
           const characterContext = extractCharacterContext(prompt, storyContent);
+          
+          // Generate all images before showing the story
+          const pagesWithImages: StoryPage[] = [];
           
           for (let i = 0; i < pages.length; i++) {
             try {
@@ -314,29 +328,71 @@ Format your response as a complete story with clear paragraph breaks.`);
                 i + 1,
                 pages.length
               );
-              if (imageUrl) {
-                setStories(prev => prev.map(story => 
-                  story.id === newStory.id 
-                    ? {
-                        ...story,
-                        pages: story.pages.map((page, index) => 
-                          index === i ? { ...page, imageUrl } : page
-                        )
-                      }
-                    : story
-                ));
-              }
+              
+              pagesWithImages.push({
+                ...pages[i],
+                imageUrl: imageUrl || undefined
+              });
+              
+              // Update progress
+              setImagesGenerated(i + 1);
+              
+              // Update story in state with new image
+              setStories(prev => prev.map(story => 
+                story.id === newStory.id 
+                  ? {
+                      ...story,
+                      pages: story.pages.map((page, index) => 
+                        index === i ? { ...page, imageUrl: imageUrl || undefined } : page
+                      )
+                    }
+                  : story
+              ));
             } catch (error: any) {
+              // If quota exceeded, stop generating but keep what we have
               if (error.message === 'QUOTA_EXCEEDED') {
-                // Stop generating more images if quota is exceeded
+                pagesWithImages.push(pages[i]); // Add page without image
                 break;
               }
+              // For other errors, add page without image and continue
+              pagesWithImages.push(pages[i]);
             }
           }
+          
+          // Update story with all images
+          setStories(prev => prev.map(story => 
+            story.id === newStory.id 
+              ? { ...story, pages: pagesWithImages }
+              : story
+          ));
         } catch (error) {
           console.error('Error in image generation loop:', error);
         }
+        
+        // Reset step tracking
+        setGenerationStep(null);
+        setImagesGenerated(0);
+        setTotalImages(0);
+      } else {
+        // If images are disabled, we can add story immediately but keep it in pending for preview
+        // Reset steps after a brief moment to allow preview
+        setTimeout(() => {
+          setStories(prev => [newStory, ...prev]);
+          setPendingStory(null);
+          setCurrentStoryId(newStory.id);
+          setCurrentPage(0);
+          setGenerationStep(null);
+          setImagesGenerated(0);
+          setTotalImages(0);
+        }, 500); // Small delay to show completion state
+        return; // Exit early for non-image stories
       }
+      
+      // Add story to list and navigate only after images are generated
+      setStories(prev => [newStory, ...prev]);
+      setPendingStory(null);
+      setCurrentStoryId(newStory.id);
+      setCurrentPage(0);
 
     } catch (error: any) {
       console.error('Error generating story:', error);
@@ -366,6 +422,9 @@ This is a common issue with the free tier.`;
       setStories(prev => [errorStory, ...prev]);
     } finally {
       setIsLoading(false);
+      setGenerationStep(null);
+      setImagesGenerated(0);
+      setTotalImages(0);
     }
   };
 
@@ -410,7 +469,7 @@ This is a common issue with the free tier.`;
     return Object.values(formData).some(value => value.trim());
   };
 
-  return {
+    return {
     // State
     stories,
     inputValue,
@@ -423,6 +482,10 @@ This is a common issue with the free tier.`;
     quotaError,
     advancedMode,
     formData,
+    generationStep,
+    imagesGenerated,
+    totalImages,
+    pendingStory,
     
     // Actions
     setInputValue,

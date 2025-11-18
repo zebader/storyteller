@@ -17,6 +17,10 @@ const AIChat: React.FC = () => {
     quotaError,
     advancedMode,
     formData,
+    generationStep,
+    imagesGenerated,
+    totalImages,
+    pendingStory,
     setInputValue,
     setGenerateImages,
     setToddlerMode,
@@ -36,6 +40,7 @@ const AIChat: React.FC = () => {
 
   const { language, t, toggleLanguage } = useTranslation();
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  const [showStoryPreview, setShowStoryPreview] = useState(false);
 
   const handleDownloadPDF = async () => {
     const currentStory = stories.find(s => s.id === currentStoryId);
@@ -200,9 +205,57 @@ const AIChat: React.FC = () => {
               ))}
               {isLoading && (
                 <S.LoadingMessage>
-                  <S.LoadingSpinner />
-                  <p>{t('creatingStory', { withImages: generateImages ? t('withImages') : '' })}</p>
+                  <S.LoadingSteps>
+                    <S.LoadingStep active={generationStep === 'story'} completed={generationStep === 'images' || (generationStep === null && !generateImages)}>
+                      <S.StepNumber completed={generationStep === 'images' || (generationStep === null && !generateImages)}>
+                        {generationStep === 'images' || (generationStep === null && !generateImages) ? '✓' : '1'}
+                      </S.StepNumber>
+                      <S.StepContent>
+                        {generationStep === 'story' && <S.LoadingSpinner />}
+                        <S.StepText>Creating story...</S.StepText>
+                      </S.StepContent>
+                      {(generationStep === 'images' || (generationStep === null && !generateImages)) && pendingStory && (
+                        <S.PreviewButton onClick={() => setShowStoryPreview(true)} title="Preview story">
+                          Preview
+                        </S.PreviewButton>
+                      )}
+                    </S.LoadingStep>
+                    {generateImages && (
+                      <S.LoadingStep active={generationStep === 'images'} completed={generationStep === null && imagesGenerated === totalImages}>
+                        <S.StepNumber completed={generationStep === null && imagesGenerated === totalImages}>
+                          {generationStep === null && imagesGenerated === totalImages ? '✓' : '2'}
+                        </S.StepNumber>
+                        <S.StepContent>
+                          {generationStep === 'images' && <S.LoadingSpinner />}
+                          <S.StepText>
+                            Creating images... {imagesGenerated > 0 && `${imagesGenerated}/${totalImages}`}
+                          </S.StepText>
+                        </S.StepContent>
+                      </S.LoadingStep>
+                    )}
+                  </S.LoadingSteps>
                 </S.LoadingMessage>
+              )}
+
+              {showStoryPreview && pendingStory && (
+                <S.StoryPreviewModal>
+                  <S.ModalOverlay onClick={() => setShowStoryPreview(false)} />
+                  <S.ModalContent>
+                    <S.ModalHeader>
+                      <S.ModalTitle>Story Preview</S.ModalTitle>
+                      <S.ModalCloseButton onClick={() => setShowStoryPreview(false)}>×</S.ModalCloseButton>
+                    </S.ModalHeader>
+                    <S.ModalBody>
+                      <S.PreviewStoryContent>
+                        {pendingStory.pages.map((page, index) => (
+                          <S.PreviewParagraph key={index}>
+                            {page.paragraph}
+                          </S.PreviewParagraph>
+                        ))}
+                      </S.PreviewStoryContent>
+                    </S.ModalBody>
+                  </S.ModalContent>
+                </S.StoryPreviewModal>
               )}
             </S.MessagesContainer>
 
