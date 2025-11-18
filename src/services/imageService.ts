@@ -1,81 +1,96 @@
-interface FreepikGeminiRequest {
-  prompt: string;
-  reference_images?: string[];
-  webhook_url?: string;
-}
-
-interface FreepikGeminiResponse {
-  data: {
-    generated: string[];
-    task_id: string;
-    status: string;
-  };
-}
-
+/**
+ * Generates an image using the Hugging Face Inference API via a backend proxy.
+ * Returns a data URL that can be used directly in img src attributes.
+ */
 export class ImageService {
-  private apiKey: string;
-  private baseUrl = 'https://api.freepik.com/v1/ai/gemini-2-5-flash-image-preview';
+  private proxyUrl: string;
+  private modelId: string;
 
   constructor() {
-    this.apiKey = process.env.REACT_APP_FREEPIK_API_KEY || '';
-    if (!this.apiKey) {
-      console.warn('FREEPIK_API_KEY not found in environment variables');
-    }
+    // Use proxy server URL (defaults to localhost:3001 in development)
+    this.proxyUrl = process.env.REACT_APP_PROXY_URL || 'http://localhost:3001';
+    // Using a reliable text-to-image model - can be changed via env variable
+    this.modelId = process.env.REACT_APP_HUGGINGFACE_MODEL_ID || 'stabilityai/stable-diffusion-xl-base-1.0';
   }
 
   /**
-   * Generate an image using Freepik's Gemini 2.5 Flash model
+   * Generate an image using Hugging Face Inference API via backend proxy
+   * @param prompt The text prompt to generate the image from
+   * @param storyContext Optional context about the story for better consistency
+   * @returns A Promise that resolves with a data URL string of the generated image
    */
   async generateImage(prompt: string, storyContext?: string): Promise<string | null> {
-    if (!this.apiKey) {
-      throw new Error('Freepik API key not configured');
-    }
-
     try {
-      // Enhance the prompt with kid-friendly context for 3-year-olds
-      const enhancedPrompt = storyContext 
-        ? `${prompt}. Context: This is part of a children's story about "${storyContext}". Create a simple, colorful cartoon illustration perfect for 3-year-old children. Use bright, cheerful colors, simple shapes, cute characters, and a friendly, playful style. Make it look like a children's book illustration. IMPORTANT: Do not include any text, words, letters, or written content in the image. The illustration should be purely visual without any text elements. Maintain consistent character appearance and style throughout the story.`
-        : `${prompt}. Create a simple, colorful cartoon illustration perfect for 3-year-old children. Use bright, cheerful colors, simple shapes, cute characters, and a friendly, playful style. Make it look like a children's book illustration. IMPORTANT: Do not include any text, words, letters, or written content in the image. The illustration should be purely visual without any text elements.`;
-
-      const requestBody: FreepikGeminiRequest = {
-        prompt: enhancedPrompt
-      };
-
-      // Create the task
-      const response = await fetch(this.baseUrl, {
+      // Make request to local proxy server
+      const response = await fetch(`${this.proxyUrl}/api/generate-image`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-freepik-api-key': this.apiKey
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          prompt,
+          storyContext,
+          modelId: this.modelId
+        })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Freepik API error: ${response.status} - ${errorText}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        
+        // Handle model loading (503) - retry after a delay
+        if (response.status === 503 && errorData.error === 'MODEL_LOADING') {
+          const estimatedTime = errorData.estimated_time || 20;
+          // Wait and retry once
+          await new Promise(resolve => setTimeout(resolve, estimatedTime * 1000));
+          return this.generateImage(prompt, storyContext);
+        }
+        
+        // Handle rate limiting
+        if (response.status === 429 || errorData.error === 'HUGGINGFACE_QUOTA_EXCEEDED') {
+          throw new Error('HUGGINGFACE_QUOTA_EXCEEDED');
+        }
+        
+        // Handle unauthorized
+        if (response.status === 401 || errorData.error === 'HUGGINGFACE_UNAUTHORIZED') {
+          throw new Error('HUGGINGFACE_UNAUTHORIZED');
+        }
+        
+        // Handle proxy server not configured
+        if (response.status === 500 && errorData.error?.includes('not configured')) {
+          throw new Error('HUGGINGFACE_NOT_CONFIGURED');
+        }
+        
+        throw new Error(`Image generation error: ${errorData.error || response.status}`);
       }
 
-      const data: FreepikGeminiResponse = await response.json();
+      // The proxy returns the image as a data URL
+      const data = await response.json();
       
-      if (!data.data.task_id) {
-        throw new Error('No task ID received from Freepik API');
+      if (!data.image) {
+        throw new Error('No image data received from proxy server');
       }
-
-      // Poll for completion
-      const imageUrl = await this.pollForCompletion(data.data.task_id);
-      return imageUrl;
+      
+      return data.image;
 
     } catch (error: any) {
-      console.error('Error generating image with Freepik Gemini:', error);
+      console.error('Error generating image with Hugging Face:', error);
       
-      // Check for specific error types
-      if (error.message.includes('quota') || error.message.includes('limit')) {
-        throw new Error('FREEPIK_QUOTA_EXCEEDED');
+      // Handle network errors (proxy server not running)
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+        throw new Error('PROXY_SERVER_NOT_RUNNING');
       }
       
-      if (error.message.includes('401') || error.message.includes('unauthorized')) {
-        throw new Error('FREEPIK_UNAUTHORIZED');
+      // Check for specific error types
+      if (error.message === 'HUGGINGFACE_QUOTA_EXCEEDED') {
+        throw new Error('HUGGINGFACE_QUOTA_EXCEEDED');
+      }
+      
+      if (error.message === 'HUGGINGFACE_UNAUTHORIZED') {
+        throw new Error('HUGGINGFACE_UNAUTHORIZED');
+      }
+      
+      if (error.message === 'HUGGINGFACE_NOT_CONFIGURED') {
+        throw new Error('HUGGINGFACE_NOT_CONFIGURED');
       }
       
       throw error;
@@ -83,55 +98,11 @@ export class ImageService {
   }
 
   /**
-   * Poll for task completion
-   */
-  private async pollForCompletion(taskId: string): Promise<string | null> {
-    const maxAttempts = 30; // 30 attempts
-    const delay = 2000; // 2 seconds between attempts
-    
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        const response = await fetch(`${this.baseUrl}/${taskId}`, {
-          method: 'GET',
-          headers: {
-            'x-freepik-api-key': this.apiKey
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Status check failed: ${response.status}`);
-        }
-
-        const data: FreepikGeminiResponse = await response.json();
-        
-        if (data.data.status === 'COMPLETED' && data.data.generated && data.data.generated.length > 0) {
-          // Return the first generated image URL
-          return data.data.generated[0];
-        }
-        
-        if (data.data.status === 'FAILED') {
-          throw new Error('Image generation failed');
-        }
-        
-        // Still processing, wait and try again
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
-      } catch (error: any) {
-        if (attempt === maxAttempts - 1) {
-          throw error;
-        }
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-    
-    throw new Error('Image generation timeout');
-  }
-
-  /**
    * Check if the service is properly configured
+   * Note: The actual API token is stored on the server, so we just check if proxy URL is set
    */
   isConfigured(): boolean {
-    return !!this.apiKey && this.apiKey !== 'your-freepik-api-key-here';
+    return !!this.proxyUrl;
   }
 
   /**
@@ -140,7 +111,7 @@ export class ImageService {
   getStatus(): { configured: boolean; service: string } {
     return {
       configured: this.isConfigured(),
-      service: 'Freepik Gemini 2.5 Flash'
+      service: `Hugging Face (${this.modelId})`
     };
   }
 }

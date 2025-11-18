@@ -57,28 +57,70 @@ export const useStoryGenerator = () => {
   };
 
   const extractCharacterContext = (prompt: string, storyContent: string): string => {
-    // Extract character information from the prompt and story
+    // Extract character information from the prompt and story for consistency
     let characterInfo = '';
+    let characterDescription = '';
+    let characterName = '';
     
     // If using advanced mode, extract character details from form data
     if (advancedMode && formData.protagonist) {
-      characterInfo = `Main character: ${formData.protagonist}. `;
+      characterName = formData.protagonist.trim();
+      characterInfo = `Main character name: ${characterName}. `;
     }
     
-    // Extract character mentions from the story content
+    // Extract character descriptions from the story content
     const storyLines = storyContent.split('\n').filter(line => line.trim());
     if (storyLines.length > 0) {
+      // Look for character descriptions in the first few paragraphs
       const firstParagraph = storyLines[0];
-      // Look for character descriptions in the first paragraph
-      const characterMatch = firstParagraph.match(/(?:There was|Once upon a time|In a|A|The)\s+([^,.]{10,50})/i);
-      if (characterMatch && !characterInfo) {
-        characterInfo = `Main character: ${characterMatch[1].trim()}. `;
+      const firstParagraphs = storyLines.slice(0, 2).join(' ');
+      
+      // Try to extract character name
+      const namePatterns = [
+        /(?:There was|Once upon a time|In a|A|The)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/,
+        /([A-Z][a-z]+)\s+(?:was|had|loved|wanted|decided)/,
+        /(?:named|called)\s+([A-Z][a-z]+)/
+      ];
+      
+      for (const pattern of namePatterns) {
+        const match = firstParagraph.match(pattern);
+        if (match && match[1]) {
+          characterName = match[1].trim();
+          break;
+        }
       }
+      
+      // Extract physical descriptions
+      const descriptionPatterns = [
+        /(?:was|had)\s+([^.]{10,80}(?:hair|eyes|fur|color|wearing|dressed)[^.]{0,50})/i,
+        /(?:with|had)\s+([^.]{10,80}(?:hair|eyes|fur|color|wearing|dressed)[^.]{0,50})/i
+      ];
+      
+      for (const pattern of descriptionPatterns) {
+        const match = firstParagraphs.match(pattern);
+        if (match && match[1]) {
+          characterDescription = match[1].trim();
+          break;
+        }
+      }
+    }
+    
+    // Build comprehensive character context
+    if (characterName) {
+      characterInfo += `Character name: ${characterName}. `;
+    }
+    if (characterDescription) {
+      characterInfo += `Character appearance: ${characterDescription}. `;
     }
     
     // Add setting information if available
     if (advancedMode && formData.setting) {
-      characterInfo += `Setting: ${formData.setting}. `;
+      characterInfo += `Setting/environment: ${formData.setting}. `;
+    }
+    
+    // Add color scheme consistency hint
+    if (characterInfo) {
+      characterInfo += `Maintain consistent character design, colors, and art style throughout all images. Same character should look identical in every scene.`;
     }
     
     return characterInfo;
@@ -92,9 +134,9 @@ export const useStoryGenerator = () => {
     totalPages?: number
   ): Promise<string> => {
     try {
-      // Check if Freepik service is configured
+      // Check if Hugging Face service is configured
       if (!imageService.isConfigured()) {
-        throw new Error('FREEPIK_NOT_CONFIGURED');
+        throw new Error('HUGGINGFACE_NOT_CONFIGURED');
       }
 
       // Create enhanced context with character consistency
@@ -102,31 +144,36 @@ export const useStoryGenerator = () => {
         ? `${storyPrompt} ${characterContext} Page ${pageNumber} of ${totalPages}.`
         : storyPrompt;
 
-      // Use Freepik service to generate image
+      // Use Hugging Face service to generate image
       const imageUrl = await imageService.generateImage(paragraph, enhancedContext);
       
       if (!imageUrl) {
-        throw new Error('No image data received from Freepik');
+        throw new Error('No image data received from Hugging Face');
       }
       
       return imageUrl;
     } catch (error: any) {
-      console.error('Error generating image with Freepik:', error);
+      console.error('Error generating image with Hugging Face:', error);
       
       // Handle specific error types
-      if (error.message === 'FREEPIK_QUOTA_EXCEEDED') {
-        setQuotaError('Freepik image generation quota exceeded. Images will be generated when quota resets.');
+      if (error.message === 'HUGGINGFACE_QUOTA_EXCEEDED') {
+        setQuotaError('Hugging Face image generation quota exceeded. Images will be generated when quota resets.');
         throw new Error('QUOTA_EXCEEDED');
       }
       
-      if (error.message === 'FREEPIK_UNAUTHORIZED') {
-        setQuotaError('Freepik API key is invalid or expired. Please check your API key.');
+      if (error.message === 'HUGGINGFACE_UNAUTHORIZED') {
+        setQuotaError('Hugging Face API token is invalid or expired. Please check your API token.');
         throw new Error('UNAUTHORIZED');
       }
       
-      if (error.message === 'FREEPIK_NOT_CONFIGURED') {
-        setQuotaError('Freepik API key not configured. Please add REACT_APP_FREEPIK_API_KEY to your .env file.');
+      if (error.message === 'HUGGINGFACE_NOT_CONFIGURED') {
+        setQuotaError('Hugging Face API token not configured. Please add HUGGINGFACE_API_TOKEN to your server .env file.');
         throw new Error('NOT_CONFIGURED');
+      }
+      
+      if (error.message === 'PROXY_SERVER_NOT_RUNNING') {
+        setQuotaError('Proxy server is not running. Please start the server with "npm run server" or "npm run dev".');
+        throw new Error('PROXY_SERVER_NOT_RUNNING');
       }
       
       return '';
