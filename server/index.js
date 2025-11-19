@@ -168,6 +168,15 @@ IMPORTANT: No text, words, letters, or written content. Purely visual illustrati
         return res.status(401).json({ error: 'HUGGINGFACE_UNAUTHORIZED' });
       }
       
+      // Handle 402 - Payment Required
+      if (response && response.status === 402) {
+        return res.status(402).json({ 
+          error: 'HUGGINGFACE_PAYMENT_REQUIRED',
+          details: errorText,
+          hint: 'This model requires a paid Hugging Face subscription. Please upgrade your account or use a different model.'
+        });
+      }
+      
       // Handle 404 - model not found or endpoint issue
       if (response && response.status === 404) {
         return res.status(404).json({ 

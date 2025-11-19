@@ -21,6 +21,8 @@ const AIChat: React.FC = () => {
     imagesGenerated,
     totalImages,
     pendingStory,
+    imageGenerationError,
+    showContinueWithoutImages,
     setInputValue,
     setGenerateImages,
     setToddlerMode,
@@ -36,6 +38,8 @@ const AIChat: React.FC = () => {
     setAdvancedMode,
     updateFormData,
     validateAdvancedForm,
+    continueWithoutImages,
+    cancelStoryGeneration,
   } = useStoryGenerator();
 
   const { language, t, toggleLanguage } = useTranslation();
@@ -99,8 +103,12 @@ const AIChat: React.FC = () => {
                     </div>
                   </S.StoryHeader>
 
-                  {/* Layout: Text + Image (if enabled) */}
-                  {generateImages ? (
+                  {/* Layout: Text + Image (if enabled and story has images) */}
+                  {(() => {
+                    // Check if story has any images
+                    const hasImages = currentStory?.pages.some(page => page.imageUrl);
+                    return hasImages && generateImages;
+                  })() ? (
                     <S.TwoColumnLayout>
                       {/* Left - Text */}
                       <S.StoryTextColumn>
@@ -266,6 +274,26 @@ const AIChat: React.FC = () => {
                   ×
                 </S.QuotaErrorButton>
               </S.QuotaErrorContainer>
+            )}
+
+            {showContinueWithoutImages && imageGenerationError && (
+              <S.ContinueWithoutImagesContainer>
+                <S.ContinueWithoutImagesMessage>
+                  <strong>Image Generation Error:</strong> {imageGenerationError}
+                  <br />
+                  <span style={{ fontSize: '0.9rem', marginTop: '8px', display: 'block' }}>
+                    Would you like to continue with the story without images?
+                  </span>
+                </S.ContinueWithoutImagesMessage>
+                <S.ContinueWithoutImagesActions>
+                  <S.ContinueButton onClick={continueWithoutImages}>
+                    Continue Without Images
+                  </S.ContinueButton>
+                  <S.CancelButton onClick={cancelStoryGeneration}>
+                    Cancel
+                  </S.CancelButton>
+                </S.ContinueWithoutImagesActions>
+              </S.ContinueWithoutImagesContainer>
             )}
 
             <S.CheckboxContainer>

@@ -715,6 +715,66 @@ export namespace S {
   }
 `;
 
+  export const ContinueWithoutImagesContainer = styled.div`
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 10px;
+  color: #856404;
+  `;
+
+  export const ContinueWithoutImagesMessage = styled.div`
+  margin-bottom: 15px;
+  line-height: 1.6;
+  `;
+
+  export const ContinueWithoutImagesActions = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  `;
+
+  export const ContinueButton = styled.button`
+  padding: 10px 20px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #218838;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+  `;
+
+  export const CancelButton = styled.button`
+  padding: 10px 20px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #5a6268;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+  `;
+
 // Checkbox Container
   export const CheckboxContainer = styled.div`
   margin-bottom: 15px;

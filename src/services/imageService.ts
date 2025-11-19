@@ -45,6 +45,11 @@ export class ImageService {
           return this.generateImage(prompt, storyContext);
         }
         
+        // Handle payment required (402)
+        if (response.status === 402 || errorData.error === 'HUGGINGFACE_PAYMENT_REQUIRED') {
+          throw new Error('HUGGINGFACE_PAYMENT_REQUIRED');
+        }
+        
         // Handle rate limiting
         if (response.status === 429 || errorData.error === 'HUGGINGFACE_QUOTA_EXCEEDED') {
           throw new Error('HUGGINGFACE_QUOTA_EXCEEDED');

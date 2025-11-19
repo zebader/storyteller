@@ -40,6 +40,8 @@ export const useStoryGenerator = () => {
   const [imagesGenerated, setImagesGenerated] = useState(0);
   const [totalImages, setTotalImages] = useState(0);
   const [pendingStory, setPendingStory] = useState<Story | null>(null);
+  const [imageGenerationError, setImageGenerationError] = useState<string | null>(null);
+  const [showContinueWithoutImages, setShowContinueWithoutImages] = useState(false);
   
   const { language } = useTranslation();
 
@@ -180,6 +182,11 @@ export const useStoryGenerator = () => {
         throw new Error('PROXY_SERVER_NOT_RUNNING');
       }
       
+      if (error.message === 'HUGGINGFACE_PAYMENT_REQUIRED') {
+        setQuotaError('This model requires a paid Hugging Face subscription. Please upgrade your account or try a different model.');
+        throw new Error('PAYMENT_REQUIRED');
+      }
+      
       return '';
     }
   };
@@ -311,6 +318,8 @@ Format your response as a complete story with clear paragraph breaks.`);
         setGenerationStep('images');
         setTotalImages(pages.length);
         setImagesGenerated(0);
+        setImageGenerationError(null);
+        setShowContinueWithoutImages(false);
         
         try {
           // Extract character and theme information from the story
@@ -318,6 +327,8 @@ Format your response as a complete story with clear paragraph breaks.`);
           
           // Generate all images before showing the story
           const pagesWithImages: StoryPage[] = [];
+          let hasError = false;
+          let errorMessage = '';
           
           for (let i = 0; i < pages.length; i++) {
             try {
@@ -349,14 +360,26 @@ Format your response as a complete story with clear paragraph breaks.`);
                   : story
               ));
             } catch (error: any) {
-              // If quota exceeded, stop generating but keep what we have
-              if (error.message === 'QUOTA_EXCEEDED') {
+              // If quota exceeded or payment required, stop and ask user
+              if (error.message === 'QUOTA_EXCEEDED' || error.message === 'PAYMENT_REQUIRED') {
+                hasError = true;
+                errorMessage = error.message === 'PAYMENT_REQUIRED' 
+                  ? 'Image generation requires a paid subscription.'
+                  : 'Image generation quota exceeded.';
                 pagesWithImages.push(pages[i]); // Add page without image
                 break;
               }
               // For other errors, add page without image and continue
               pagesWithImages.push(pages[i]);
             }
+          }
+          
+          // If there was an error, show option to continue without images
+          if (hasError) {
+            setImageGenerationError(errorMessage);
+            setShowContinueWithoutImages(true);
+            // Don't proceed - wait for user decision
+            return;
           }
           
           // Update story with all images
@@ -367,6 +390,9 @@ Format your response as a complete story with clear paragraph breaks.`);
           ));
         } catch (error) {
           console.error('Error in image generation loop:', error);
+          setImageGenerationError('Failed to generate images.');
+          setShowContinueWithoutImages(true);
+          return;
         }
         
         // Reset step tracking
@@ -461,6 +487,33 @@ This is a common issue with the free tier.`;
     setQuotaError(null);
   };
 
+  const continueWithoutImages = () => {
+    if (pendingStory) {
+      // Add story without images and proceed
+      setStories(prev => [pendingStory, ...prev]);
+      setPendingStory(null);
+      setCurrentStoryId(pendingStory.id);
+      setCurrentPage(0);
+      setGenerationStep(null);
+      setImagesGenerated(0);
+      setTotalImages(0);
+      setImageGenerationError(null);
+      setShowContinueWithoutImages(false);
+      setIsLoading(false);
+    }
+  };
+
+  const cancelStoryGeneration = () => {
+    // Cancel and remove pending story
+    setPendingStory(null);
+    setGenerationStep(null);
+    setImagesGenerated(0);
+    setTotalImages(0);
+    setImageGenerationError(null);
+    setShowContinueWithoutImages(false);
+    setIsLoading(false);
+  };
+
   const updateFormData = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -486,6 +539,8 @@ This is a common issue with the free tier.`;
     imagesGenerated,
     totalImages,
     pendingStory,
+    imageGenerationError,
+    showContinueWithoutImages,
     
     // Actions
     setInputValue,
@@ -503,5 +558,7 @@ This is a common issue with the free tier.`;
     setAdvancedMode,
     updateFormData,
     validateAdvancedForm,
+    continueWithoutImages,
+    cancelStoryGeneration,
   };
 };
