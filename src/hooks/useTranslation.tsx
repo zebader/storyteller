@@ -1,32 +1,41 @@
-import { useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { en } from '../translations/en';
 import { es } from '../translations/es';
 
 export type Language = 'en' | 'es';
+export type TranslationKey = keyof typeof en;
 
 const translations = {
   en,
   es
 };
 
-export const useTranslation = () => {
-  const [language, setLanguage] = useState<Language>('es');
+const STORAGE_KEY = 'app-language';
 
-  // Load language from localStorage on mount
-  useEffect(() => {
-    const savedLanguage = localStorage.getItem('app-language') as Language;
-    if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'es')) {
-      setLanguage(savedLanguage);
-    }
-  }, []);
+const readSavedLanguage = (): Language => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'en' || saved === 'es') return saved;
+  } catch {
+    // Storage can be unavailable (private mode, tests)
+  }
+  return 'es';
+};
+
+const useLanguageState = () => {
+  const [language, setLanguage] = useState<Language>(readSavedLanguage);
 
   // Save language to localStorage when it changes
   useEffect(() => {
-    localStorage.setItem('app-language', language);
+    try {
+      localStorage.setItem(STORAGE_KEY, language);
+    } catch {
+      // Ignore storage errors
+    }
   }, [language]);
 
-  const t = (key: keyof typeof en, params?: Record<string, string | number>) => {
-    let text = translations[language][key];
+  const t = (key: TranslationKey, params?: Record<string, string | number>) => {
+    let text: string = translations[language][key];
     
     // Replace parameters in the text
     if (params) {
@@ -48,4 +57,20 @@ export const useTranslation = () => {
     toggleLanguage,
     setLanguage
   };
+};
+
+const LanguageContext = createContext<ReturnType<typeof useLanguageState> | null>(null);
+
+// Shared language state, so the UI and the story generator always agree on the language
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const value = useLanguageState();
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+};
+
+export const useTranslation = () => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useTranslation must be used inside a LanguageProvider');
+  }
+  return context;
 };

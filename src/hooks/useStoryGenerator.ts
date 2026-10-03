@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from './useTranslation';
 import { imageService } from '../services/imageService';
 import { storyService } from '../services/storyService';
+import { deleteStory, loadStories, saveStory } from '../services/storyStorage';
 
 export interface StoryPage {
   paragraph: string;
@@ -25,7 +26,6 @@ export const useStoryGenerator = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [textServiceStatus, setTextServiceStatus] = useState<TextServiceStatus>('checking');
   const [currentStoryId, setCurrentStoryId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(0);
   const [generateImages, setGenerateImages] = useState(false);
   const [toddlerMode, setToddlerMode] = useState(false);
   const [quotaError, setQuotaError] = useState<string | null>(null);
@@ -55,7 +55,24 @@ export const useStoryGenerator = () => {
       .then(configured => setTextServiceStatus(configured ? 'ready' : 'not_configured'))
       .catch(() => setTextServiceStatus('server_down'));
     imageService.isSupported().then(setWebGPUSupported);
+
+    // Restore the bookshelf, keeping anything created while it was loading
+    loadStories().then(saved => {
+      setStories(prev => [...prev, ...saved.filter(story => !prev.some(p => p.id === story.id))]);
+    });
   }, []);
+
+  /** Put a finished story on the shelf and save it */
+  const addStory = (story: Story) => {
+    setStories(prev => [story, ...prev]);
+    saveStory(story);
+  };
+
+  const removeStory = (id: number) => {
+    setStories(prev => prev.filter(story => story.id !== id));
+    if (currentStoryId === id) setCurrentStoryId(null);
+    deleteStory(id);
+  };
 
   const extractCharacterContext = (prompt: string, storyContent: string): string => {
     // Extract character information from the prompt and story for consistency
@@ -373,10 +390,9 @@ Format your response as a complete story with clear paragraph breaks.`);
         // If images are disabled, we can add story immediately but keep it in pending for preview
         // Reset steps after a brief moment to allow preview
         setTimeout(() => {
-          setStories(prev => [newStory, ...prev]);
+          addStory(newStory);
           setPendingStory(null);
           setCurrentStoryId(newStory.id);
-          setCurrentPage(0);
           setGenerationStep(null);
           setImagesGenerated(0);
           setTotalImages(0);
@@ -385,10 +401,9 @@ Format your response as a complete story with clear paragraph breaks.`);
       }
       
       // Add story to list and navigate only after images are generated
-      setStories(prev => [newStory, ...prev]);
+      addStory(newStory);
       setPendingStory(null);
       setCurrentStoryId(newStory.id);
-      setCurrentPage(0);
 
     } catch (error: any) {
       console.error('Error generating story:', error);
@@ -431,26 +446,8 @@ Format your response as a complete story with clear paragraph breaks.`);
     }
   };
 
-  const goToPage = (pageIndex: number) => {
-    setCurrentPage(pageIndex);
-  };
-
-  const nextPage = () => {
-    const currentStory = stories.find(s => s.id === currentStoryId);
-    if (currentStory && currentPage < currentStory.pages.length - 1) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const prevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
   const backToStories = () => {
     setCurrentStoryId(null);
-    setCurrentPage(0);
   };
 
   const dismissQuotaError = () => {
@@ -460,10 +457,9 @@ Format your response as a complete story with clear paragraph breaks.`);
   const continueWithoutImages = () => {
     if (pendingStory) {
       // Add story without images and proceed
-      setStories(prev => [pendingStory, ...prev]);
+      addStory(pendingStory);
       setPendingStory(null);
       setCurrentStoryId(pendingStory.id);
-      setCurrentPage(0);
       setGenerationStep(null);
       setImagesGenerated(0);
       setTotalImages(0);
@@ -499,7 +495,6 @@ Format your response as a complete story with clear paragraph breaks.`);
     isLoading,
     textServiceStatus,
     currentStoryId,
-    currentPage,
     generateImages,
     toddlerMode,
     quotaError,
@@ -519,18 +514,15 @@ Format your response as a complete story with clear paragraph breaks.`);
     setGenerateImages,
     setToddlerMode,
     setCurrentStoryId,
-    setCurrentPage,
     generateStory,
     handleKeyDown,
-    goToPage,
-    nextPage,
-    prevPage,
     backToStories,
     dismissQuotaError,
     setAdvancedMode,
     updateFormData,
     validateAdvancedForm,
     continueWithoutImages,
+    removeStory,
     cancelStoryGeneration,
   };
 };
