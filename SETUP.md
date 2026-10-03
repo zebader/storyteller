@@ -2,79 +2,54 @@
 
 ## Environment Variables
 
-Create a `.env` file in the root directory with the following variables:
+Copy `.env.example` to `.env` in the project root:
 
 ```env
-# Google AI API Key (for story generation)
-REACT_APP_GOOGLE_AI_API_KEY=your-google-ai-api-key-here
+# Groq API key for story generation (server-side only)
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx
 
-# Hugging Face API Token (for image generation)
-# This should be set in the server/.env file, not here
-# Get your token from: https://huggingface.co/settings/tokens
-HUGGINGFACE_API_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Optional: Groq model (defaults to openai/gpt-oss-120b)
+GROQ_MODEL=openai/gpt-oss-120b
 
-# Optional: Hugging Face Model ID (defaults to stabilityai/stable-diffusion-xl-base-1.0)
-HUGGINGFACE_MODEL_ID=stabilityai/stable-diffusion-xl-base-1.0
-
-# Optional: Proxy server URL (defaults to http://localhost:3001)
-REACT_APP_PROXY_URL=http://localhost:3001
-
-# Optional: Server port (defaults to 3001)
+# Optional: API server port (defaults to 3001)
 PORT=3001
 ```
 
-**Important:** The `HUGGINGFACE_API_TOKEN` should be in the root `.env` file (not in `server/.env`) because the server reads from the root `.env` file using `dotenv`.
+`.env` is git-ignored. Image generation needs no keys, because it runs in the browser.
+
+If you change `PORT`, also update the `/api` proxy target in `vite.config.ts`.
 
 ## Installation
 
-1. Install dependencies:
 ```bash
-npm install
-# or
 pnpm install
+pnpm dev
 ```
 
-2. Set up your `.env` file with the API keys (see above)
+`pnpm dev` starts the Express server on :3001 and the Vite dev server on :3000. Vite proxies `/api/*` to the Express server. To run them separately, use `pnpm run server` and `pnpm start` in two terminals.
 
-3. Start the development servers:
-```bash
-# Option 1: Run both server and React app together
-npm run dev
+## Getting a Groq API Key
 
-# Option 2: Run them separately (in two terminals)
-# Terminal 1:
-npm run server
+1. Visit [console.groq.com/keys](https://console.groq.com/keys)
+2. Sign in and click "Create API Key"
+3. Paste it into `.env` as `GROQ_API_KEY` and restart the server
 
-# Terminal 2:
-npm start
-```
+## Image Generation (runonweb Imagine)
 
-## Getting API Keys
-
-### Google AI API Key
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the generated API key
-
-### Hugging Face API Token
-1. Visit [Hugging Face Settings](https://huggingface.co/settings/tokens)
-2. Sign in or create an account
-3. Click "New token"
-4. Give it a name and select "Read" access
-5. Copy the generated token (starts with `hf_`)
+- Runs locally in the browser with WebGPU. There's no server, API key or cost.
+- First use downloads about 3.9 GB of weights. The app shows the download progress, and the weights are cached in IndexedDB for later runs. Clearing site data removes the cache.
+- Requires Chrome or Edge with WebGPU support. Firefox and Safari support varies.
 
 ## Troubleshooting
 
-### CORS Errors
-If you see CORS errors, make sure the proxy server is running on port 3001. The React app calls the proxy server, which then calls Hugging Face API (avoiding CORS issues).
+### "The story server is not running"
+Start it with `pnpm dev` or `pnpm run server`, and check that it's listening on http://localhost:3001.
 
-### Proxy Server Not Running
-If you get "Proxy server is not running" error:
-- Make sure you've run `npm run server` or `npm run dev`
-- Check that the server is running on `http://localhost:3001`
-- Verify the `HUGGINGFACE_API_TOKEN` is set in your `.env` file
+### "Groq API key not configured"
+Set `GROQ_API_KEY` in the root `.env` file and restart the server. The server logs `GROQ_API_KEY: ✅ Set` on startup when the key is set.
 
-### Model Loading (503 Error)
-Some Hugging Face models need to be loaded first. The app will automatically retry after the estimated wait time.
+### "Image generation needs WebGPU"
+Your browser or GPU doesn't support WebGPU. Use a recent Chrome or Edge, or continue without images.
 
+### Rate limit errors
+The Groq free tier has per-minute limits. Wait a moment and try again.

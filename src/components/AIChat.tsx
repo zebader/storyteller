@@ -9,7 +9,7 @@ const AIChat: React.FC = () => {
     stories,
     inputValue,
     isLoading,
-    genAI,
+    textServiceStatus,
     currentStoryId,
     currentPage,
     generateImages,
@@ -23,6 +23,8 @@ const AIChat: React.FC = () => {
     pendingStory,
     imageGenerationError,
     showContinueWithoutImages,
+    modelDownloadProgress,
+    webGPUSupported,
     setInputValue,
     setGenerateImages,
     setToddlerMode,
@@ -65,11 +67,22 @@ const AIChat: React.FC = () => {
   return (
     <S.AppWrapper>
       <S.ChatContainer>
-        {!genAI ? (
+        {textServiceStatus !== 'ready' ? (
           <S.ChatBox>
             <S.ErrorMessage>
-              <p>{t('apiKeyNotFound')}</p>
-              <p>{t('apiKeyInstructions')}</p>
+              {textServiceStatus === 'checking' && <p>{t('checkingServer')}</p>}
+              {textServiceStatus === 'not_configured' && (
+                <>
+                  <p>{t('apiKeyNotFound')}</p>
+                  <p>{t('apiKeyInstructions')}</p>
+                </>
+              )}
+              {textServiceStatus === 'server_down' && (
+                <>
+                  <p>{t('serverDown')}</p>
+                  <p>{t('serverDownInstructions')}</p>
+                </>
+              )}
             </S.ErrorMessage>
           </S.ChatBox>
         ) : currentStoryId ? (
@@ -236,7 +249,9 @@ const AIChat: React.FC = () => {
                         <S.StepContent>
                           {generationStep === 'images' && <S.LoadingSpinner />}
                           <S.StepText>
-                            Creating images... {imagesGenerated > 0 && `${imagesGenerated}/${totalImages}`}
+                            {modelDownloadProgress !== null
+                              ? t('downloadingImageModel', { progress: Math.round(modelDownloadProgress) })
+                              : <>{t('creatingImages')} {imagesGenerated > 0 && `${imagesGenerated}/${totalImages}`}</>}
                           </S.StepText>
                         </S.StepContent>
                       </S.LoadingStep>
@@ -311,6 +326,9 @@ const AIChat: React.FC = () => {
                 <S.CheckboxLabel htmlFor="generateImages" inactive={!generateImages}>
                   {t('generateIllustrations')}
                 </S.CheckboxLabel>
+                {webGPUSupported === false && (
+                  <small style={{ opacity: 0.7 }}>{t('webGPUUnsupported')}</small>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <S.ToggleSwitch htmlFor="toddlerMode">

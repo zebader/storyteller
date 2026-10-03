@@ -1,11 +1,14 @@
 export const en = {
   // App Title and Header
   appTitle: "📚 AI Story Generator",
-  appSubtitle: "Powered by Google Gemini 2.5 Flash",
+  appSubtitle: "Powered by Groq + runonweb",
   
   // Error Messages
-  apiKeyNotFound: "⚠️ API Key not found in environment variables.",
-  apiKeyInstructions: "Please set REACT_APP_GOOGLE_AI_API_KEY in your .env file.",
+  apiKeyNotFound: "⚠️ Groq API key not configured on the server.",
+  apiKeyInstructions: "Please set GROQ_API_KEY in your .env file and restart the server.",
+  serverDown: "⚠️ The story server is not running.",
+  serverDownInstructions: "Start it with \"pnpm dev\" (or \"pnpm run server\").",
+  checkingServer: "Connecting to the story server...",
   
   // Story View
   storyTitle: "",
@@ -28,10 +31,13 @@ export const en = {
   
   // Quota Error
   quotaNotice: "⚠️ Quota Notice:",
-  quotaExceeded: "API quota exceeded. Please enable billing in Google Cloud Console.",
+  quotaExceeded: "Groq rate limit reached. Please wait a moment and try again.",
   
   // Form Elements
   generateIllustrations: "Generate illustrations",
+  webGPUUnsupported: "Illustrations need WebGPU (recent Chrome or Edge)",
+  downloadingImageModel: "Downloading image model (one-time, ~3.9 GB)... {progress}%",
+  creatingImages: "Creating images...",
   toddlerMode: "3-year-old mode",
   advancedMode: "Advanced mode",
   simpleMode: "Simple mode",

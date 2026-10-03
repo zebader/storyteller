@@ -1,123 +1,97 @@
+import { ImageGenerator, isImageGenerationSupported } from 'runonweb/image';
+
 /**
- * Generates an image using the Hugging Face Inference API via a backend proxy.
- * Returns a data URL that can be used directly in img src attributes.
+ * Generates images in the browser with runonweb Imagine (Bonsai Image 4B / FLUX.2 Klein, WebGPU).
+ * Uses the ternary "Quality" weights (~3.9 GB), downloaded once and cached in IndexedDB.
+ * Returns data URLs so images work directly in <img> tags and in the PDF export.
  */
 export class ImageService {
-  private proxyUrl: string;
-  private modelId: string;
+  private generator: ImageGenerator | null = null;
+  private loadPromise: Promise<void> | null = null;
+  private onLoadProgress: ((progress: number) => void) | null = null;
 
-  constructor() {
-    // Use proxy server URL (defaults to localhost:3001 in development)
-    this.proxyUrl = process.env.REACT_APP_PROXY_URL || 'http://localhost:3001';
-    // Using a reliable text-to-image model - can be changed via env variable
-    this.modelId = process.env.REACT_APP_HUGGINGFACE_MODEL_ID || 'stabilityai/stable-diffusion-xl-base-1.0';
-  }
-
-  /**
-   * Generate an image using Hugging Face Inference API via backend proxy
-   * @param prompt The text prompt to generate the image from
-   * @param storyContext Optional context about the story for better consistency
-   * @returns A Promise that resolves with a data URL string of the generated image
-   */
-  async generateImage(prompt: string, storyContext?: string): Promise<string | null> {
+  /** Whether this browser has WebGPU (required, there is no fallback) */
+  async isSupported(): Promise<boolean> {
     try {
-      // Make request to local proxy server
-      const response = await fetch(`${this.proxyUrl}/api/generate-image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt,
-          storyContext,
-          modelId: this.modelId
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        
-        // Handle model loading (503) - retry after a delay
-        if (response.status === 503 && errorData.error === 'MODEL_LOADING') {
-          const estimatedTime = errorData.estimated_time || 20;
-          // Wait and retry once
-          await new Promise(resolve => setTimeout(resolve, estimatedTime * 1000));
-          return this.generateImage(prompt, storyContext);
-        }
-        
-        // Handle payment required (402)
-        if (response.status === 402 || errorData.error === 'HUGGINGFACE_PAYMENT_REQUIRED') {
-          throw new Error('HUGGINGFACE_PAYMENT_REQUIRED');
-        }
-        
-        // Handle rate limiting
-        if (response.status === 429 || errorData.error === 'HUGGINGFACE_QUOTA_EXCEEDED') {
-          throw new Error('HUGGINGFACE_QUOTA_EXCEEDED');
-        }
-        
-        // Handle unauthorized
-        if (response.status === 401 || errorData.error === 'HUGGINGFACE_UNAUTHORIZED') {
-          throw new Error('HUGGINGFACE_UNAUTHORIZED');
-        }
-        
-        // Handle proxy server not configured
-        if (response.status === 500 && errorData.error?.includes('not configured')) {
-          throw new Error('HUGGINGFACE_NOT_CONFIGURED');
-        }
-        
-        throw new Error(`Image generation error: ${errorData.error || response.status}`);
-      }
-
-      // The proxy returns the image as a data URL
-      const data = await response.json();
-      
-      if (!data.image) {
-        throw new Error('No image data received from proxy server');
-      }
-      
-      return data.image;
-
-    } catch (error: any) {
-      console.error('Error generating image with Hugging Face:', error);
-      
-      // Handle network errors (proxy server not running)
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-        throw new Error('PROXY_SERVER_NOT_RUNNING');
-      }
-      
-      // Check for specific error types
-      if (error.message === 'HUGGINGFACE_QUOTA_EXCEEDED') {
-        throw new Error('HUGGINGFACE_QUOTA_EXCEEDED');
-      }
-      
-      if (error.message === 'HUGGINGFACE_UNAUTHORIZED') {
-        throw new Error('HUGGINGFACE_UNAUTHORIZED');
-      }
-      
-      if (error.message === 'HUGGINGFACE_NOT_CONFIGURED') {
-        throw new Error('HUGGINGFACE_NOT_CONFIGURED');
-      }
-      
-      throw error;
+      return await isImageGenerationSupported();
+    } catch {
+      return false;
     }
   }
 
   /**
-   * Check if the service is properly configured
-   * Note: The actual API token is stored on the server, so we just check if proxy URL is set
+   * Download (first time) and initialize the model.
+   * @param onProgress Called with load progress from 0 to 100
    */
-  isConfigured(): boolean {
-    return !!this.proxyUrl;
+  async ensureLoaded(onProgress?: (progress: number) => void): Promise<void> {
+    this.onLoadProgress = onProgress ?? null;
+
+    if (!this.generator) {
+      this.generator = new ImageGenerator({
+        size: 'ternary',
+        onProgress: (info) => {
+          if (info.status.startsWith('loading')) {
+            this.onLoadProgress?.(info.progress ?? 0);
+          }
+        }
+      });
+    }
+
+    if (!this.loadPromise) {
+      this.loadPromise = this.generator.load().catch((error) => {
+        console.error('Error loading image model:', error);
+        this.loadPromise = null;
+        throw new Error('IMAGE_MODEL_LOAD_FAILED');
+      });
+    }
+
+    try {
+      await this.loadPromise;
+    } finally {
+      this.onLoadProgress = null;
+    }
   }
 
   /**
-   * Get service status information
+   * Generate a children's-book illustration for a story paragraph
+   * @param prompt The paragraph to illustrate
+   * @param storyContext Optional story/character context for consistency
+   * @param seed Shared seed across a story's pages for a more consistent look
+   * @returns A data URL of the generated PNG
    */
-  getStatus(): { configured: boolean; service: string } {
-    return {
-      configured: this.isConfigured(),
-      service: `Hugging Face (${this.modelId})`
-    };
+  async generateImage(prompt: string, storyContext?: string, seed?: number): Promise<string> {
+    if (!(await this.isSupported())) {
+      throw new Error('WEBGPU_UNSUPPORTED');
+    }
+
+    await this.ensureLoaded();
+
+    const { image } = await this.generator!.generate(this.buildPrompt(prompt, storyContext), {
+      width: 512,
+      height: 512,
+      seed
+    });
+
+    return this.blobToDataUrl(image);
+  }
+
+  private buildPrompt(prompt: string, storyContext?: string): string {
+    const parts = [
+      prompt,
+      storyContext ? `Context: ${storyContext}` : '',
+      "Children's picture book illustration, soft watercolor and gouache, warm cheerful colors, cute expressive characters, clean composition, gentle lighting, highly detailed.",
+      'No text, words or letters.'
+    ];
+    return parts.filter(Boolean).join('\n');
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
   }
 }
 

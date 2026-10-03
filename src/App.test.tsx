@@ -1,9 +1,18 @@
-import React from 'react';
+import { afterEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+test('shows the Groq setup message when the server has no API key', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ status: 'ok', groqConfigured: false })
+  }));
+
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+
+  expect(await screen.findByText(/GROQ_API_KEY/)).toBeInTheDocument();
 });

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useTranslation } from './useTranslation';
 import { imageService } from '../services/imageService';
+import { storyService } from '../services/storyService';
 
 export interface StoryPage {
   paragraph: string;
@@ -17,11 +17,13 @@ export interface Story {
   timestamp: Date;
 }
 
+export type TextServiceStatus = 'checking' | 'ready' | 'not_configured' | 'server_down';
+
 export const useStoryGenerator = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [genAI, setGenAI] = useState<GoogleGenerativeAI | null>(null);
+  const [textServiceStatus, setTextServiceStatus] = useState<TextServiceStatus>('checking');
   const [currentStoryId, setCurrentStoryId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [generateImages, setGenerateImages] = useState(false);
@@ -42,25 +44,18 @@ export const useStoryGenerator = () => {
   const [pendingStory, setPendingStory] = useState<Story | null>(null);
   const [imageGenerationError, setImageGenerationError] = useState<string | null>(null);
   const [showContinueWithoutImages, setShowContinueWithoutImages] = useState(false);
+  const [modelDownloadProgress, setModelDownloadProgress] = useState<number | null>(null);
+  const [webGPUSupported, setWebGPUSupported] = useState<boolean | null>(null);
   
   const { language } = useTranslation();
 
-  // Initialize AI with environment variable on component mount
+  // Check that the story server is running with a Groq key, and whether WebGPU is available
   useEffect(() => {
-    const envApiKey = process.env.REACT_APP_GOOGLE_AI_API_KEY;
-    if (envApiKey && envApiKey !== 'your-api-key-here') {
-      initializeAI(envApiKey);
-    }
+    storyService.checkHealth()
+      .then(configured => setTextServiceStatus(configured ? 'ready' : 'not_configured'))
+      .catch(() => setTextServiceStatus('server_down'));
+    imageService.isSupported().then(setWebGPUSupported);
   }, []);
-
-  const initializeAI = (key: string) => {
-    if (key.trim()) {
-      const ai = new GoogleGenerativeAI(key);
-      setGenAI(ai);
-      return true;
-    }
-    return false;
-  };
 
   const extractCharacterContext = (prompt: string, storyContent: string): string => {
     // Extract character information from the prompt and story for consistency
@@ -132,63 +127,34 @@ export const useStoryGenerator = () => {
     return characterInfo;
   };
 
-  const generateImageForParagraph = async (
-    paragraph: string, 
-    storyPrompt: string, 
-    characterContext?: string,
-    pageNumber?: number,
-    totalPages?: number
+  const generateImageForPage = async (
+    imagePrompt: string,
+    context: string | undefined,
+    seed: number
   ): Promise<string> => {
     try {
-      // Check if Hugging Face service is configured
-      if (!imageService.isConfigured()) {
-        throw new Error('HUGGINGFACE_NOT_CONFIGURED');
-      }
-
-      // Create enhanced context with character consistency
-      const enhancedContext = characterContext 
-        ? `${storyPrompt} ${characterContext} Page ${pageNumber} of ${totalPages}.`
-        : storyPrompt;
-
-      // Use Hugging Face service to generate image
-      const imageUrl = await imageService.generateImage(paragraph, enhancedContext);
-      
-      if (!imageUrl) {
-        throw new Error('No image data received from Hugging Face');
-      }
-      
-      return imageUrl;
+      // Generate the image in the browser with runonweb Imagine
+      return await imageService.generateImage(imagePrompt, context, seed);
     } catch (error: any) {
-      console.error('Error generating image with Hugging Face:', error);
+      console.error('Error generating image:', error);
       
-      // Handle specific error types
-      if (error.message === 'HUGGINGFACE_QUOTA_EXCEEDED') {
-        setQuotaError('Hugging Face image generation quota exceeded. Images will be generated when quota resets.');
-        throw new Error('QUOTA_EXCEEDED');
-      }
-      
-      if (error.message === 'HUGGINGFACE_UNAUTHORIZED') {
-        setQuotaError('Hugging Face API token is invalid or expired. Please check your API token.');
-        throw new Error('UNAUTHORIZED');
-      }
-      
-      if (error.message === 'HUGGINGFACE_NOT_CONFIGURED') {
-        setQuotaError('Hugging Face API token not configured. Please add HUGGINGFACE_API_TOKEN to your server .env file.');
-        throw new Error('NOT_CONFIGURED');
-      }
-      
-      if (error.message === 'PROXY_SERVER_NOT_RUNNING') {
-        setQuotaError('Proxy server is not running. Please start the server with "npm run server" or "npm run dev".');
-        throw new Error('PROXY_SERVER_NOT_RUNNING');
-      }
-      
-      if (error.message === 'HUGGINGFACE_PAYMENT_REQUIRED') {
-        setQuotaError('This model requires a paid Hugging Face subscription. Please upgrade your account or try a different model.');
-        throw new Error('PAYMENT_REQUIRED');
+      // These errors affect every page, so stop and let the user decide
+      if (error.message === 'WEBGPU_UNSUPPORTED' || error.message === 'IMAGE_MODEL_LOAD_FAILED') {
+        throw error;
       }
       
       return '';
     }
+  };
+
+  const imageErrorMessage = (code: string): string => {
+    if (code === 'WEBGPU_UNSUPPORTED') {
+      return 'Image generation needs WebGPU (a recent Chrome or Edge with a compatible GPU).';
+    }
+    if (code === 'IMAGE_MODEL_LOAD_FAILED') {
+      return 'The image model could not be downloaded or initialized.';
+    }
+    return 'Failed to generate images.';
   };
 
   const generateStory = async () => {
@@ -199,7 +165,7 @@ export const useStoryGenerator = () => {
         return; // Will be handled by UI validation
       }
     } else {
-      if (!inputValue.trim() || !genAI || isLoading) return;
+      if (!inputValue.trim() || textServiceStatus !== 'ready' || isLoading) return;
     }
 
     // Build prompt based on mode
@@ -282,14 +248,11 @@ Rules:
 
 Format your response as a complete story with clear paragraph breaks.`);
 
-      const model = genAI!.getGenerativeModel({ 
-        model: "gemini-2.5-flash",
-        systemInstruction
-      });
-      
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const storyContent = response.text();
+      // Llama models tend to add titles or preambles, which would break the paragraph split
+      const outputFormat = language === 'es'
+        ? 'Responde solo con los párrafos de la historia separados por una línea en blanco. Sin título, introducción ni notas.'
+        : 'Respond with only the story paragraphs separated by a blank line. No title, introduction or notes.';
+      const storyContent = await storyService.generateStory(prompt, `${systemInstruction}\n\n${outputFormat}`);
 
       // Split story into paragraphs
       const paragraphs = storyContent.split('\n\n').filter(p => p.trim().length > 0);
@@ -322,8 +285,27 @@ Format your response as a complete story with clear paragraph breaks.`);
         setShowContinueWithoutImages(false);
         
         try {
+          // Make sure the in-browser model is available and loaded (first run downloads the weights)
+          if (!(await imageService.isSupported())) {
+            throw new Error('WEBGPU_UNSUPPORTED');
+          }
+          setModelDownloadProgress(0);
+          await imageService.ensureLoaded(setModelDownloadProgress);
+          setModelDownloadProgress(null);
+
+          // Short English scene prompts with a shared character description work far better
+          // than raw paragraphs; fall back to the paragraphs if Groq can't produce them
+          const scenePrompts = await storyService
+            .generateImagePrompts(pages.map(page => page.paragraph))
+            .catch(error => {
+              console.warn('Falling back to paragraph image prompts:', error);
+              return null;
+            });
+
           // Extract character and theme information from the story
           const characterContext = extractCharacterContext(prompt, storyContent);
+          // Same seed on every page keeps the illustrations more consistent
+          const seed = Math.floor(Math.random() * 1_000_000_000);
           
           // Generate all images before showing the story
           const pagesWithImages: StoryPage[] = [];
@@ -332,13 +314,15 @@ Format your response as a complete story with clear paragraph breaks.`);
           
           for (let i = 0; i < pages.length; i++) {
             try {
-              const imageUrl = await generateImageForParagraph(
-                pages[i].paragraph, 
-                prompt, 
-                characterContext,
-                i + 1,
-                pages.length
-              );
+              const imageUrl = scenePrompts
+                ? await generateImageForPage(scenePrompts[i], undefined, seed)
+                : await generateImageForPage(
+                    pages[i].paragraph,
+                    characterContext
+                      ? `${prompt} ${characterContext} Page ${i + 1} of ${pages.length}.`
+                      : prompt,
+                    seed
+                  );
               
               pagesWithImages.push({
                 ...pages[i],
@@ -347,30 +331,12 @@ Format your response as a complete story with clear paragraph breaks.`);
               
               // Update progress
               setImagesGenerated(i + 1);
-              
-              // Update story in state with new image
-              setStories(prev => prev.map(story => 
-                story.id === newStory.id 
-                  ? {
-                      ...story,
-                      pages: story.pages.map((page, index) => 
-                        index === i ? { ...page, imageUrl: imageUrl || undefined } : page
-                      )
-                    }
-                  : story
-              ));
             } catch (error: any) {
-              // If quota exceeded or payment required, stop and ask user
-              if (error.message === 'QUOTA_EXCEEDED' || error.message === 'PAYMENT_REQUIRED') {
-                hasError = true;
-                errorMessage = error.message === 'PAYMENT_REQUIRED' 
-                  ? 'Image generation requires a paid subscription.'
-                  : 'Image generation quota exceeded.';
-                pagesWithImages.push(pages[i]); // Add page without image
-                break;
-              }
-              // For other errors, add page without image and continue
-              pagesWithImages.push(pages[i]);
+              // generateImageForPage only throws errors that affect every page: stop and ask user
+              hasError = true;
+              errorMessage = imageErrorMessage(error.message);
+              pagesWithImages.push(pages[i]); // Add page without image
+              break;
             }
           }
           
@@ -382,15 +348,19 @@ Format your response as a complete story with clear paragraph breaks.`);
             return;
           }
           
-          // Update story with all images
-          setStories(prev => prev.map(story => 
-            story.id === newStory.id 
-              ? { ...story, pages: pagesWithImages }
-              : story
-          ));
-        } catch (error) {
+          // Every page failed without a fatal error: let the user decide instead of silently showing no images
+          if (!pagesWithImages.some(page => page.imageUrl)) {
+            setImageGenerationError(imageErrorMessage(''));
+            setShowContinueWithoutImages(true);
+            return;
+          }
+          
+          // The story isn't in the list yet, so attach the images before it's added below
+          newStory.pages = pagesWithImages;
+        } catch (error: any) {
           console.error('Error in image generation loop:', error);
-          setImageGenerationError('Failed to generate images.');
+          setModelDownloadProgress(null);
+          setImageGenerationError(imageErrorMessage(error.message));
           setShowContinueWithoutImages(true);
           return;
         }
@@ -425,17 +395,17 @@ Format your response as a complete story with clear paragraph breaks.`);
       
       let errorMessage = 'Sorry, there was an error generating your story.';
       
-      if (error.message && error.message.includes('quota')) {
-        errorMessage = `🚨 Quota Exceeded: Your Google Cloud project needs billing enabled.
-        
-To fix this:
-1. Go to Google Cloud Console
-2. Enable billing for your project
-3. Wait 24-48 hours for changes to take effect
-4. Or create a new project with billing enabled
-
-This is a common issue with the free tier.`;
-        setQuotaError('API quota exceeded. Please enable billing in Google Cloud Console.');
+      if (error.message === 'GROQ_RATE_LIMITED') {
+        errorMessage = 'Groq rate limit reached. Please wait a moment and try again.';
+        setQuotaError(errorMessage);
+      } else if (error.message === 'GROQ_UNAUTHORIZED') {
+        errorMessage = 'Groq API key is invalid. Please check GROQ_API_KEY in your .env file.';
+      } else if (error.message === 'GROQ_NOT_CONFIGURED') {
+        errorMessage = 'Groq API key is not set. Please add GROQ_API_KEY to your .env file and restart the server.';
+        setTextServiceStatus('not_configured');
+      } else if (error.message === 'PROXY_SERVER_NOT_RUNNING') {
+        errorMessage = 'The story server is not running. Start it with "pnpm dev".';
+        setTextServiceStatus('server_down');
       }
       
       const errorStory: Story = {
@@ -527,7 +497,7 @@ This is a common issue with the free tier.`;
     stories,
     inputValue,
     isLoading,
-    genAI,
+    textServiceStatus,
     currentStoryId,
     currentPage,
     generateImages,
@@ -541,6 +511,8 @@ This is a common issue with the free tier.`;
     pendingStory,
     imageGenerationError,
     showContinueWithoutImages,
+    modelDownloadProgress,
+    webGPUSupported,
     
     // Actions
     setInputValue,

@@ -1,11 +1,14 @@
 export const es = {
   // App Title and Header
   appTitle: "📚 Generador de Historias IA",
-  appSubtitle: "Impulsado por Google Gemini 2.5 Flash",
+  appSubtitle: "Impulsado por Groq + runonweb",
   
   // Error Messages
-  apiKeyNotFound: "⚠️ Clave API no encontrada en las variables de entorno.",
-  apiKeyInstructions: "Por favor, configura REACT_APP_GOOGLE_AI_API_KEY en tu archivo .env.",
+  apiKeyNotFound: "⚠️ Clave API de Groq no configurada en el servidor.",
+  apiKeyInstructions: "Por favor, configura GROQ_API_KEY en tu archivo .env y reinicia el servidor.",
+  serverDown: "⚠️ El servidor de historias no está en ejecución.",
+  serverDownInstructions: "Inícialo con \"pnpm dev\" (o \"pnpm run server\").",
+  checkingServer: "Conectando con el servidor de historias...",
   
   // Story View
   storyTitle: "",
@@ -28,10 +31,13 @@ export const es = {
   
   // Quota Error
   quotaNotice: "⚠️ Aviso de Cuota:",
-  quotaExceeded: "Cuota de API excedida. Por favor, habilita la facturación en Google Cloud Console.",
+  quotaExceeded: "Límite de uso de Groq alcanzado. Espera un momento e inténtalo de nuevo.",
   
   // Form Elements
   generateIllustrations: "Generar ilustraciones",
+  webGPUUnsupported: "Las ilustraciones necesitan WebGPU (Chrome o Edge recientes)",
+  downloadingImageModel: "Descargando modelo de imágenes (solo la primera vez, ~3,9 GB)... {progress}%",
+  creatingImages: "Creando imágenes...",
   toddlerMode: "Modo 3 años",
   advancedMode: "Modo avanzado",
   simpleMode: "Modo simple",
