@@ -61,7 +61,7 @@ export const BookHalf: React.FC<{
   kind: 'paper' | 'cover' | 'blank';
   children?: React.ReactNode;
 }> = ({ side, kind, children }) => (
-  <Rim $side={side}>
+  <Rim $side={side} $cover={kind === 'cover'}>
     {kind === 'cover' ? children : <Paper $side={side}>{children}</Paper>}
   </Rim>
 );
@@ -155,8 +155,9 @@ const EndActions: React.FC<{ onReadAgain: () => void; onBack: () => void }> = ({
 /* ---------- Styles ---------- */
 
 const RIM = '12px';
+const SPINE = '24px';
 
-const Rim = styled.div<{ $side: Side }>`
+const Rim = styled.div<{ $side: Side; $cover: boolean }>`
   position: absolute;
   inset: 0;
   display: flex;
@@ -175,6 +176,28 @@ const Rim = styled.div<{ $side: Side }>`
   ${({ $side }) => $side === 'single' && css`
     padding: ${RIM};
     border-radius: 22px;
+  `}
+
+  /* The closed book: a full outline and a hardcover spine down the left edge */
+  ${({ $cover, theme }) => $cover && css`
+    padding: 0;
+    border: 3px solid ${theme.colors.outline};
+    border-radius: 10px 22px 22px 10px;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: ${SPINE};
+      border-right: 3px solid ${theme.colors.outline};
+      background:
+        /* two binding grooves */
+        linear-gradient(90deg, transparent 7px, rgba(255, 255, 255, 0.35) 7px 9px, transparent 9px 13px, rgba(0, 0, 0, 0.15) 13px 15px, transparent 15px),
+        ${theme.colors.coverDark};
+    }
   `}
 `;
 
@@ -307,8 +330,8 @@ const SingleEnd = styled.div`
 const Cover = styled.div`
   flex: 1;
   display: flex;
+  margin-left: ${SPINE};
   padding: 14px;
-  border-radius: inherit;
   background:
     radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.25), transparent 50%),
     ${({ theme }) => theme.colors.cover};
