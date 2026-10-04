@@ -33,7 +33,7 @@ export class StoryService {
     const data = await response.json().catch(() => ({ error: 'Unknown error' }));
 
     if (!response.ok) {
-      if (['GROQ_NOT_CONFIGURED', 'GROQ_UNAUTHORIZED', 'GROQ_RATE_LIMITED'].includes(data.error)) {
+      if (['GROQ_NOT_CONFIGURED', 'GROQ_UNAUTHORIZED', 'GROQ_RATE_LIMITED', 'TOO_MANY_STORIES'].includes(data.error)) {
         throw new Error(data.error);
       }
       throw new Error(data.message || data.error || `Story generation error: ${response.status}`);

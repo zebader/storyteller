@@ -11,6 +11,9 @@ GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx
 # Optional: Groq model (defaults to openai/gpt-oss-120b)
 GROQ_MODEL=openai/gpt-oss-120b
 
+# Optional: stories each visitor can create per hour (defaults to 15, 0 disables the limit)
+STORIES_PER_HOUR=15
+
 # Optional: API server port (defaults to 3001)
 PORT=3001
 ```
@@ -39,6 +42,20 @@ pnpm dev
 - Runs locally in the browser with WebGPU. There's no server, API key or cost.
 - First use downloads about 3.9 GB of weights. The app shows the download progress, and the weights are cached in IndexedDB for later runs. Clearing site data removes the cache.
 - Requires Chrome or Edge with WebGPU support. Firefox and Safari support varies.
+
+## Deploying to Vercel (free)
+
+The frontend is a static Vite build and the API runs as Vercel functions (`api/*.js`), which share their code with the local Express server (`server/storyApi.js`). Image generation runs in each visitor's browser, so it costs nothing to host.
+
+1. Push the project to a GitHub (or GitLab/Bitbucket) repository.
+2. In [vercel.com/new](https://vercel.com/new), import the repository. `vercel.json` already sets the build (Vite, `pnpm build`, output in `build/`), so keep the defaults.
+3. Under **Environment Variables**, add `GROQ_API_KEY` (and optionally `GROQ_MODEL` and `STORIES_PER_HOUR`).
+4. Click **Deploy**. Every push to the main branch redeploys; other branches get preview URLs.
+
+Notes:
+- **Free plan:** Vercel's Hobby plan is for non-commercial use only.
+- **Rate limit:** `STORIES_PER_HOUR` limits how many stories each visitor (by IP) can create, to protect your Groq quota. It's counted in memory per function instance, so on Vercel it's a best-effort guard, not an exact quota.
+- **After changing env vars:** redeploy for them to take effect (Deployments → ⋯ → Redeploy).
 
 ## Troubleshooting
 

@@ -18,7 +18,7 @@ cp .env.example .env   # then set GROQ_API_KEY
 pnpm dev               # starts the Groq server (:3001) and Vite (:3000)
 ```
 
-Open http://localhost:3000. See [SETUP.md](SETUP.md) for configuration details and troubleshooting.
+Open http://localhost:3000. See [SETUP.md](SETUP.md) for configuration details, troubleshooting, and **deploying to Vercel for free**.
 
 ## Scripts
 
@@ -32,7 +32,9 @@ Open http://localhost:3000. See [SETUP.md](SETUP.md) for configuration details a
 ## Project structure
 
 ```
-server/index.js                Express server: Groq story generation (/api/generate-story, /api/health)
+server/storyApi.js             Story API (Groq calls, per-visitor rate limit), shared by:
+server/index.js                  the local Express server (pnpm dev)
+api/*.js                         the Vercel functions in production
 src/components/AIChat.tsx      Main UI
 src/hooks/useStoryGenerator.ts Story/image generation flow and state
 src/services/storyService.ts   Client for the story server

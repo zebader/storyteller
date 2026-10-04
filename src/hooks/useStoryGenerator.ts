@@ -410,7 +410,10 @@ Format your response as a complete story with clear paragraph breaks.`);
       
       let errorMessage = 'Sorry, there was an error generating your story.';
       
-      if (error.message === 'GROQ_RATE_LIMITED') {
+      if (error.message === 'TOO_MANY_STORIES') {
+        errorMessage = 'You have created a lot of stories this hour. Please try again a bit later.';
+        setQuotaError(errorMessage);
+      } else if (error.message === 'GROQ_RATE_LIMITED') {
         errorMessage = 'Groq rate limit reached. Please wait a moment and try again.';
         setQuotaError(errorMessage);
       } else if (error.message === 'GROQ_UNAUTHORIZED') {
