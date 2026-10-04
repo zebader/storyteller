@@ -4,8 +4,7 @@ import type { Story } from '../hooks/useStoryGenerator';
 import { useTranslation } from '../hooks/useTranslation';
 import { Dialog } from './ui/Dialog';
 import { GameButton } from './ui/GameButton';
-
-const COVER_COLORS = ['#ff8a5c', '#4fb3ff', '#9b7bff', '#58c46b', '#ff6b8b', '#ffc93c'];
+import { bookColor } from './bookColors';
 
 interface BookshelfProps {
   stories: Story[];
@@ -31,7 +30,7 @@ export const Bookshelf: React.FC<BookshelfProps> = ({ stories, onOpen, onDelete 
         <Empty>{t('emptyShelf')}</Empty>
       ) : (
         <Shelf>
-          {stories.map((story, i) => {
+          {stories.map(story => {
             if (story.pages.length === 0) {
               return (
                 <Slot key={story.id}>
@@ -49,7 +48,7 @@ export const Bookshelf: React.FC<BookshelfProps> = ({ stories, onOpen, onDelete 
               <Slot key={story.id}>
                 <BookCover
                   onClick={() => onOpen(story.id)}
-                  $color={COVER_COLORS[i % COVER_COLORS.length]}
+                  $color={bookColor(story.id).cover}
                   title={story.prompt}
                 >
                   <Art>{cover ? <img src={cover} alt="" /> : <span aria-hidden>📖</span>}</Art>

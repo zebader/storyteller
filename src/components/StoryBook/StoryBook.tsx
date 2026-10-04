@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styled, { css, keyframes } from 'styled-components';
+import styled, { css, keyframes, ThemeProvider } from 'styled-components';
 import type { Story } from '../../hooks/useStoryGenerator';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -7,6 +7,7 @@ import { pdfService } from '../../services/pdfService';
 import { GameButton } from '../ui/GameButton';
 import { BookHalf, pageFor, type Side } from './BookPage';
 import { FLIP_MS, useBookNavigation } from './useBookNavigation';
+import { withBookColors } from '../bookColors';
 
 interface StoryBookProps {
   story: Story;
@@ -85,68 +86,71 @@ export const StoryBook: React.FC<StoryBookProps> = ({ story, onBack }) => {
   const onStoryPage = shownIndex >= 0 && shownIndex < lastIndex;
 
   return (
-    <Screen>
-      <TopBar>
-        <GameButton $tone="paper" $size="sm" onClick={onBack}>🏠 {t('backToShelf')}</GameButton>
-        <Title title={story.prompt}>{story.prompt}</Title>
-        <GameButton $tone="leaf" $size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
-          {isDownloadingPDF ? t('downloadingPDF') : t('downloadPDF')}
-        </GameButton>
-      </TopBar>
+    // The book uses this story's own cover color, matching its spine on the shelf
+    <ThemeProvider theme={withBookColors(story.id)}>
+      <Screen>
+        <TopBar>
+          <GameButton $tone="paper" $size="sm" onClick={onBack}>🏠 {t('backToShelf')}</GameButton>
+          <Title title={story.prompt}>{story.prompt}</Title>
+          <GameButton $tone="leaf" $size="sm" onClick={handleDownloadPDF} disabled={isDownloadingPDF}>
+            {isDownloadingPDF ? t('downloadingPDF') : t('downloadPDF')}
+          </GameButton>
+        </TopBar>
 
-      <Stage {...swipeHandlers}>
-        <Book $spread={isSpread} $closed={closed}>
-          {isSpread ? (
-            <>
-              <HalfSlot $side="left">{leftUnder}</HalfSlot>
-              <HalfSlot $side="right">{rightUnder}</HalfSlot>
-              {!closed && <Spine />}
-              {!closed && <Ribbon />}
-            </>
-          ) : (
-            <HalfSlot $side="single">{rightUnder}</HalfSlot>
-          )}
+        <Stage {...swipeHandlers}>
+          <Book $spread={isSpread} $closed={closed}>
+            {isSpread ? (
+              <>
+                <HalfSlot $side="left">{leftUnder}</HalfSlot>
+                <HalfSlot $side="right">{rightUnder}</HalfSlot>
+                {!closed && <Spine />}
+                {!closed && <Ribbon />}
+              </>
+            ) : (
+              <HalfSlot $side="single">{rightUnder}</HalfSlot>
+            )}
 
-          {flip && leafMode && (
-            <Leaf
-              $mode={leafMode}
-              data-testid="page-leaf"
-              onAnimationEnd={(e) => e.target === e.currentTarget && finishFlip()}
-            >
-              <Face $side={leafSide(leafMode, 'front')}>{leafFront}<Shade /></Face>
-              <Face $side={leafSide(leafMode, 'back')} $back>{leafBack}<Shade /></Face>
-            </Leaf>
-          )}
+            {flip && leafMode && (
+              <Leaf
+                $mode={leafMode}
+                data-testid="page-leaf"
+                onAnimationEnd={(e) => e.target === e.currentTarget && finishFlip()}
+              >
+                <Face $side={leafSide(leafMode, 'front')}>{leafFront}<Shade /></Face>
+                <Face $side={leafSide(leafMode, 'back')} $back>{leafBack}<Shade /></Face>
+              </Leaf>
+            )}
 
-          {isSpread && !flip && index > -1 && (
-            <EdgeZone $side="left" onClick={prev} aria-label={t('previousPage')} />
-          )}
-          {isSpread && !flip && index > -1 && index < lastIndex && (
-            <EdgeZone $side="right" onClick={next} aria-label={t('nextPage')} />
-          )}
-        </Book>
-      </Stage>
+            {isSpread && !flip && index > -1 && (
+              <EdgeZone $side="left" onClick={prev} aria-label={t('previousPage')} />
+            )}
+            {isSpread && !flip && index > -1 && index < lastIndex && (
+              <EdgeZone $side="right" onClick={next} aria-label={t('nextPage')} />
+            )}
+          </Book>
+        </Stage>
 
-      <BottomBar>
-        <GameButton $tone="sky" $round onClick={prev} disabled={!!flip || index <= -1} aria-label={t('previousPage')}>
-          ◀
-        </GameButton>
-        <Dots>
-          {story.pages.map((_, i) => (
-            <Dot
-              key={i}
-              $active={onStoryPage && shownIndex === i}
-              onClick={() => goTo(i)}
-              disabled={!!flip}
-              aria-label={t('pageInfo', { current: i + 1, total: story.pages.length })}
-            />
-          ))}
-        </Dots>
-        <GameButton $tone="sky" $round onClick={next} disabled={!!flip || index >= lastIndex} aria-label={t('nextPage')}>
-          ▶
-        </GameButton>
-      </BottomBar>
-    </Screen>
+        <BottomBar>
+          <GameButton $tone="sky" $round onClick={prev} disabled={!!flip || index <= -1} aria-label={t('previousPage')}>
+            ◀
+          </GameButton>
+          <Dots>
+            {story.pages.map((_, i) => (
+              <Dot
+                key={i}
+                $active={onStoryPage && shownIndex === i}
+                onClick={() => goTo(i)}
+                disabled={!!flip}
+                aria-label={t('pageInfo', { current: i + 1, total: story.pages.length })}
+              />
+            ))}
+          </Dots>
+          <GameButton $tone="sky" $round onClick={next} disabled={!!flip || index >= lastIndex} aria-label={t('nextPage')}>
+            ▶
+          </GameButton>
+        </BottomBar>
+      </Screen>
+    </ThemeProvider>
   );
 };
 
