@@ -1,0 +1,8 @@
+# Never upload local secrets; GROQ_API_KEY is set as a Vercel environment variable
+.env
+.env.*
+!.env.example
+
+node_modules
+build
+coverage
